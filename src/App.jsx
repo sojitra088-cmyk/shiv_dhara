@@ -15,6 +15,8 @@ const Service = lazy(() => import("./pages/Service"));
 const Contact = lazy(() => import("./pages/Contact"));
 const CategoryProducts = lazy(() => import("./pages/CategoryProducts"));
 const SingleProduct = lazy(() => import("./pages/SingleProduct"));
+const AllProducts = lazy(() => import("./pages/AllProducts"));
+
 
 // Lazy load admin pages
 const AdminLogin = lazy(() => import("./admin/AdminLogin"));
@@ -56,6 +58,7 @@ function AppContent() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/products/:category" element={<CategoryProducts />} />
           <Route path="/:category/:subcategory" element={<CategoryProducts />} />
+          <Route path="/all-products" element={<AllProducts />} />
 
           <Route
             path="/products/:category/:slug"

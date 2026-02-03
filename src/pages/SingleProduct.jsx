@@ -5,7 +5,7 @@ import { supabase } from "../supabase";
 import ProductSlider from "../components/ProductSlider";
 import CTC from "../components/CTC";
 import usageIcons from "../data/usageIcons";
-
+import PageLoader from "../components/PageLoader";
 
 // animations.js (optional helper file)
 export const fadeUp = {
@@ -85,8 +85,24 @@ const SingleProduct = () => {
       fetchProduct();
     }, [slug]);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Loading product…</p>
+      </div>
+    );
+  }
+
   if (!product) {
-    return <p className="pt-40 text-center">Product not found</p>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Product not found</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return <PageLoader />;
   }
 
   
