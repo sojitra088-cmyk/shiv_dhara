@@ -4,6 +4,7 @@ import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 const Services = () => {
   const containerRef = useRef(null);
   const [windowWidth, setWindowWidth] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -90,7 +91,7 @@ const slides = [
   const imageWidth = useTransform(
     smoothScroll,
     [0, 0.15],
-    isDesktop ? ["100vw", "50vw"] : ["100vw", "100vw"]
+    isDesktop ? ["50vw", "50vw"] : ["100vw", "100vw"]
   );
 
   // CHANGED: Moves to 0vw (Left Side) instead of 50vw
@@ -99,6 +100,14 @@ const slides = [
     [0, 0.15],
     isDesktop ? ["0vw", "0vw"] : ["0vw", "0vw"]
   );
+  useEffect(() => {
+  const unsubscribe = smoothScroll.on("change", (v) => {
+    const total = slides.length;
+    const index = Math.min(total - 1, Math.floor(v * total));
+    setActiveIndex(index);
+  });
+  return unsubscribe;
+}, [smoothScroll, slides.length]);
 
 
   return (
@@ -113,75 +122,36 @@ const slides = [
 
           {/* Column 2: Content Area */}
           <div className="relative h-full w-full flex items-center">
-            {slides.map((slide, index) => {
-              const start = index / slides.length;
-              const end = (index + 1) / slides.length;
-              
-              // eslint-disable-next-line react-hooks/rules-of-hooks
-              const opacity = useTransform(
-                scrollYProgress,
-                [start, start + 0.1, end - 0.1, end],
-                [0, 1, 1, index === slides.length - 1 ? 1 : 0]
-              );
+            {slides.map((slide, index) => (
+              <motion.div
+                key={index}
+                style={{
+                  display: index === activeIndex ? "flex" : "none",
+                  pointerEvents: index === activeIndex ? "auto" : "none",
+                  zIndex: 30,
+                }}
+                className="absolute inset-0 flex flex-col justify-end pb-12 md:p-0 md:justify-center"
+              >
+                {/* MOBILE */}
+                <div className="relative w-full md:hidden bg-white/20 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+                  <span className="text-lime-400 text-xs tracking-widest">{slide.type}</span>
+                  <h2 className="text-4xl font-serif uppercase mt-3">{slide.title}</h2>
+                  <p className="mt-4 text-sm">{slide.desc}</p>
+                </div>
 
-              return (
-                // inside slides.map return (...)
-                <motion.div
-                  key={index}
-                  style={{ opacity }}
-                  className="absolute inset-0 flex flex-col justify-end pb-12 md:p-0 md:justify-center pointer-events-auto"
-                >
-                  {/* MOBILE ONLY: Architectural Floating Glass Card */}
-                  <div className="relative w-full md:hidden bg-white/20 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl overflow-hidden">
-                    {/* Subtle inner glow for depth */}
-                    <div className="absolute -top-24 -left-24 w-48 h-48 bg-lime-500/20 blur-3xl rounded-full" />
-                    
-                    <div className="relative z-10">
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="h-[1px] w-6 bg-lime-400" />
-                        <span className="text-lime-400 font-bold tracking-[0.2em] uppercase text-[10px]">
-                          {slide.type}
-                        </span>
-                      </div>
+                {/* DESKTOP */}
+                <div className="hidden md:flex flex-col pl-16 lg:pl-24">
+                  <span className="text-lime-600 tracking-widest text-xs">{slide.type}</span>
+                  <h2 className="text-6xl lg:text-7xl font-serif uppercase mt-4">
+                    {slide.title}
+                  </h2>
+                  <p className="text-slate-600 text-xl mt-6 max-w-md">
+                    {slide.desc}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
 
-                      <h2 className="text-4xl leading-tight font-serif uppercase mb-4">
-                        {slide.title}
-                      </h2>
-
-                      <p className="text-sm leading-relaxed mb-8 font-light">
-                        {slide.desc}
-                      </p>
-
-                      <button className="w-full bg-lime-500 text-black py-4 rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-transform">
-                        View Collection
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* DESKTOP CONTENT: Remains clean on the white background */}
-                  <div className="hidden md:flex flex-col pl-16 lg:pl-24">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="h-[1px] w-8 bg-lime-500" />
-                      <span className="text-lime-600 font-bold tracking-[0.3em] uppercase text-xs">
-                        {slide.type}
-                      </span>
-                    </div>
-
-                    <h2 className="text-6xl lg:text-7xl font-serif mb-6 leading-[1.1] uppercase text-slate-900">
-                      {slide.title}
-                    </h2>
-
-                    <p className="text-slate-600 text-xl leading-relaxed max-w-md font-light mb-10">
-                      {slide.desc}
-                    </p>
-
-                    <button className="w-fit bg-lime-500 text-black px-10 py-4 rounded-full font-bold uppercase text-[11px] tracking-widest hover:bg-slate-900 hover:text-white transition-all duration-500">
-                      View Service
-                    </button>
-                  </div>
-                </motion.div>
-              );
-            })}
           </div>
         </div>
 

@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 const GraniteShowcase = () => {
   const containerRef = useRef(null);
   const [windowWidth, setWindowWidth] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -66,14 +67,22 @@ const GraniteShowcase = () => {
     [0, 0.15],
     isDesktop ? ["0vw", "0vw"] : ["0vw", "0vw"]
   );
-
-  const getIsActive = (index) => {
+  useEffect(() => {
+  const unsubscribe = smoothScroll.on("change", (v) => {
     const total = slides.length;
-    const progress = scrollYProgress.get();
-    const start = index / total;
-    const end = (index + 1) / total;
-    return progress >= start && progress < end;
-  };
+    const index = Math.min(total - 1, Math.floor(v * total));
+    setActiveIndex(index);
+  });
+  return unsubscribe;
+}, [smoothScroll, slides.length]);
+
+  // const getIsActive = (index) => {
+  //   const total = slides.length;
+  //   const progress = scrollYProgress.get();
+  //   const start = index / total;
+  //   const end = (index + 1) / total;
+  //   return progress >= start && progress < end;
+  // };
   return (
     <div ref={containerRef} className="relative h-[400vh] bg-gray-50">
       <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center">
@@ -87,27 +96,28 @@ const GraniteShowcase = () => {
           {/* Column 2: Content Area */}
           <div className="relative h-full w-full flex items-center">
             {slides.map((slide, index) => {
-              const start = index / slides.length;
-              const end = (index + 1) / slides.length;
+              // const start = index / slides.length;
+              // const end = (index + 1) / slides.length;
               
-              // eslint-disable-next-line react-hooks/rules-of-hooks
-              const opacity = useTransform(
-                scrollYProgress,
-                [start, start + 0.1, end - 0.1, end],
-                [0, 1, 1, index === slides.length - 1 ? 1 : 0]
-              );
+              // // eslint-disable-next-line react-hooks/rules-of-hooks
+              // const opacity = useTransform(
+              //   scrollYProgress,
+              //   [start, start + 0.1, end - 0.1, end],
+              //   [0, 1, 1, index === slides.length - 1 ? 1 : 0]
+              // );
 
               return (
                 // inside slides.map return (...)
                 <motion.div
                   key={index}
-                   style={{
-                    opacity,
-                    pointerEvents: getIsActive(index) ? "auto" : "none",
-                    zIndex: getIsActive(index) ? 30 : 10,
+                  style={{
+                    display: index === activeIndex ? "flex" : "none",
+                    pointerEvents: index === activeIndex ? "auto" : "none",
+                    zIndex: 30,
                   }}
-                  className="absolute inset-0 flex flex-col justify-end pb-12 md:p-0 md:justify-center pointer-events-auto"
+                  className="absolute inset-0 flex flex-col justify-end pb-12 md:p-0 md:justify-center"
                 >
+
                   {/* MOBILE ONLY: Architectural Floating Glass Card */}
                   <div className="relative w-full md:hidden bg-white/20 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl overflow-hidden">
                     {/* Subtle inner glow for depth */}

@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 const MarbleShowcase = () => {
   const containerRef = useRef(null);
   const [windowWidth, setWindowWidth] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -55,6 +56,18 @@ const MarbleShowcase = () => {
       slug: "indian-marble",
     },
   ];
+  useEffect(() => {
+  const unsubscribe = smoothScroll.on("change", (v) => {
+    const total = slides.length;
+    const index = Math.min(
+      total - 1,
+      Math.floor(v * total)
+    );
+    setActiveIndex(index);
+  });
+
+  return unsubscribe;
+}, [smoothScroll, slides.length]);
 
 
   const imageWidth = useTransform(
@@ -69,13 +82,13 @@ const MarbleShowcase = () => {
     isDesktop ? ["0vw", "50vw"] : ["0vw", "0vw"]
   );
 
-  const getIsActive = (index) => {
-    const total = slides.length;
-    const progress = scrollYProgress.get();
-    const start = index / total;
-    const end = (index + 1) / total;
-    return progress >= start && progress < end;
-  };
+  // const getIsActive = (index) => {
+  //   const total = slides.length;
+  //   const progress = scrollYProgress.get();
+  //   const start = index / total;
+  //   const end = (index + 1) / total;
+  //   return progress >= start && progress < end;
+  // };
 
   return (
     <div ref={containerRef} className="relative h-[400vh] bg-white">
@@ -85,26 +98,30 @@ const MarbleShowcase = () => {
         <div className="max-w-7xl mx-auto px-6 w-full h-full grid grid-cols-1 md:grid-cols-2 items-center relative z-30 pointer-events-none">
           <div className="relative h-full flex items-center pointer-events-auto">
             {slides.map((slide, index) => {
-              const start = index / slides.length;
-              const end = (index + 1) / slides.length;
+              // const start = index / slides.length;
+              // const end = (index + 1) / slides.length;
               
-              // eslint-disable-next-line react-hooks/rules-of-hooks
-              const opacity = useTransform(
-                scrollYProgress,
-                [start, start + 0.1, end - 0.1, end],
-                [0, 1, 1, index === slides.length - 1 ? 1 : 0]
-              );
+              // // eslint-disable-next-line react-hooks/rules-of-hooks
+              // const opacity = isDesktop
+              //   ? useTransform(
+              //       scrollYProgress,
+              //       [start, start + 0.1, end - 0.1, end],
+              //       [0, 1, 1, index === slides.length - 1 ? 1 : 0]
+              //     )
+              //   : 1;
 
               return (
                 <motion.div
                   key={index}
                   style={{
-                    opacity,
-                    pointerEvents: getIsActive(index) ? "auto" : "none",
-                    zIndex: getIsActive(index) ? 30 : 10,
+                    display: index === activeIndex ? "flex" : "none",
+                    pointerEvents: index === activeIndex ? "auto" : "none",
+                    zIndex: 30,
                   }}
+
                   className="absolute inset-0 flex flex-col justify-end pb-12 md:pb-0 md:justify-center pr-24"
                 >
+
 
                   <span className="text-lime-600 font-bold tracking-[0.3em] uppercase text-[10px] md:text-xs mb-2">
                     {slide.type}

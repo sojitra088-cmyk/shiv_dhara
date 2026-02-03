@@ -48,12 +48,11 @@ const TilesShowcase = () => {
     const unsubscribe = smoothProgress.on("change", (latest) => {
       const total = slides.length;
 
-      // remove dead scroll zone
-      const adjusted = Math.max(0, latest - 0.06);
+      const adjusted = Math.max(0, latest - 0.02);
 
       const index = Math.min(
         total - 1,
-        Math.floor(adjusted * total)
+        Math.round(adjusted * (total - 1))
       );
 
       setActiveIndex(index);
@@ -62,11 +61,12 @@ const TilesShowcase = () => {
     return unsubscribe;
   }, [smoothProgress, slides.length]);
 
+
   return (
     <div
       ref={containerRef}
       className="relative"
-      style={{ height: `${slides.length * 180}vh` }}
+      style={{ height: `${slides.length * 120}vh` }}
     >
 
       <div className="sticky top-0 h-screen w-full overflow-hidden">

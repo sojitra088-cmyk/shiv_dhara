@@ -5,6 +5,8 @@ import { ArrowUpRight } from "lucide-react";
 import CTC from "../components/CTC";
 import ApplicationCard from "../components/ApplicationCard";
 import CategoryStackedSlider from "../components/Categories";
+import ProductSlider  from "../components/ProductSlider";
+import { supabase } from "../supabase";
 
 const containerVariants = {
   hidden: {},
@@ -238,6 +240,29 @@ const Product = () => {
     }, []);
 
 
+    const [products, setProducts] = useState([]);
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        const fetchProducts = async () => {
+          const { data, error } = await supabase
+            .from("products")
+            .select(`
+              *,
+              product_images(*),
+              product_finishes(*),
+              subcategories(
+                categories(slug)
+              )
+            `);
+
+          if (!error) setProducts(data || []);
+          setLoading(false);
+        };
+
+        fetchProducts();
+      }, []);
+
 
     return (
       <>
@@ -349,61 +374,12 @@ const Product = () => {
             </p>
           </motion.div>
 
-          {/* EDITORIAL GRID */}
-          <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            className="grid md:grid-cols-3 gap-16"
-          >
-            {collections.map((item, i) => (
-              <motion.article
-                key={i}
-                variants={editorialCardVariants}
-                className="group"
-              >
-                {/* IMAGE */}
-                <div className="relative h-[340px] overflow-hidden rounded-[28px] mb-8">
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="
-                      w-full h-full object-cover
-                      transition-transform duration-[1200ms] ease-out
-                      group-hover:scale-[1.03]
-                    "
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                </div>
-
-                {/* TEXT */}
-                <div className="px-2">
-                  <h3 className="text-2xl font-serif text-gray-900 mb-4 leading-snug">
-                    {item.title}
-                  </h3>
-
-                  <p className="text-gray-600 leading-relaxed text-base max-w-md">
-                    {item.desc}
-                  </p>
-
-                  {/* SUBTLE LINK */}
-                  <div className="mt-6 inline-flex items-center gap-2 text-lime-600 text-xs uppercase tracking-widest font-semibold opacity-80">
-                    Explore
-                    <i
-                      className="
-                        fa-solid fa-arrow-right
-                        transition-transform duration-300 ease-out
-                        group-hover:translate-x-2
-                      "
-                    ></i>
-                  </div>
-                </div>
-              </motion.article>
-            ))}
-          </motion.div>
+          {/* ✅ PASS PRODUCTS */}
+          <ProductSlider products={products} />
 
         </div>
       </section>
+
       <section className="pt-32 pb-32 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
 
