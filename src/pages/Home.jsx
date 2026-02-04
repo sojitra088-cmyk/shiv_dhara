@@ -66,7 +66,7 @@ const Home = () => {
                 </a>
 
                 <a
-                    href="/all-products"
+                    href="/allproducts"
                     className="
                     border border-white/40 text-white
                     px-10 py-4

@@ -58,7 +58,7 @@ function AppContent() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/products/:category" element={<CategoryProducts />} />
           <Route path="/:category/:subcategory" element={<CategoryProducts />} />
-          <Route path="/all-products" element={<AllProducts />} />
+          <Route path="/allproducts" element={<AllProducts />} />
 
           <Route
             path="/products/:category/:slug"
