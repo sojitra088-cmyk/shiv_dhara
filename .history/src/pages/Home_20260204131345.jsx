@@ -5,7 +5,7 @@ import TilesShowcase from '../components/TilesShowcase';
 import BathwareSection from '../components/BathwareSection';
 import ProjectSection from '../components/ProjectSection';
 import LocationSection from '../components/LocationSection';
-// import Link from "next/link";
+import Link from "next/link";
 import { Link } from "react-router-dom";
 
 import CTC from '../components/CTC';
@@ -69,7 +69,7 @@ const Home = () => {
                 </a>
 
                 <Link
-                  to="/allproducts"
+                  href="/allproducts"
                   className="
                     border border-white/40 text-white
                     px-10 py-4
@@ -81,7 +81,6 @@ const Home = () => {
                 >
                   View Collections
                 </Link>
-
 
                 </div>
 

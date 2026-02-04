@@ -69,18 +69,18 @@ const Home = () => {
                 </a>
 
                 <Link
-                  to="/allproducts"
-                  className="
-                    border border-white/40 text-white
-                    px-10 py-4
-                    rounded-full
-                    font-bold uppercase tracking-widest text-xs
-                    hover:bg-white hover:text-black transition-all
-                    text-center
-                  "
-                >
-                  View Collections
-                </Link>
+  to="/allproducts"
+  className="
+    border border-white/40 text-white
+    px-10 py-4
+    rounded-full
+    font-bold uppercase tracking-widest text-xs
+    hover:bg-white hover:text-black transition-all
+    text-center
+  "
+>
+  View Collections
+</Link>
 
 
                 </div>

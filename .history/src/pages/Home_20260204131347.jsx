@@ -69,7 +69,7 @@ const Home = () => {
                 </a>
 
                 <Link
-                  to="/allproducts"
+                  href="/allproducts"
                   className="
                     border border-white/40 text-white
                     px-10 py-4
@@ -81,7 +81,6 @@ const Home = () => {
                 >
                   View Collections
                 </Link>
-
 
                 </div>
 
