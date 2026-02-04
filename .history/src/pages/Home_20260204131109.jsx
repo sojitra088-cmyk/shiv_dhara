@@ -5,7 +5,6 @@ import TilesShowcase from '../components/TilesShowcase';
 import BathwareSection from '../components/BathwareSection';
 import ProjectSection from '../components/ProjectSection';
 import LocationSection from '../components/LocationSection';
-import Link from "next/link";
 
 import CTC from '../components/CTC';
 const Home = () => {
