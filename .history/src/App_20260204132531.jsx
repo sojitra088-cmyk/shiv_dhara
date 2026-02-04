@@ -68,18 +68,18 @@ function AppContent() {
 
           <Route path="/admin" element={<AdminLogin />} />
 
-          <Route element={<ProtectedRoute />}>
-            <Route path="/admin/*" element={<AdminLayout />}>
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="add-category" element={<AddCategory />} />
-              <Route path="add-product" element={<AddProduct />} />
-              <Route path="manage-products" element={<ManageProducts />} />
-              <Route path="add-subcategory" element={<AddSubcategory />} />
-              <Route path="manage-subcategories" element={<ManageSubcategories />} />
-              <Route path="manage-categories" element={<ManageCategories />} />
-              <Route path="contacts" element={<AdminContacts />} />
-            </Route>
-          </Route>
+<Route element={<ProtectedRoute />}>
+  <Route path="/admin/*" element={<AdminLayout />}>
+    <Route path="dashboard" element={<Dashboard />} />
+    <Route path="add-category" element={<AddCategory />} />
+    <Route path="add-product" element={<AddProduct />} />
+    <Route path="manage-products" element={<ManageProducts />} />
+    <Route path="add-subcategory" element={<AddSubcategory />} />
+    <Route path="manage-subcategories" element={<ManageSubcategories />} />
+    <Route path="manage-categories" element={<ManageCategories />} />
+    <Route path="contacts" element={<AdminContacts />} />
+  </Route>
+</Route>
 
         </Routes>
       </Suspense>

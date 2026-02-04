@@ -68,7 +68,6 @@ function AppContent() {
 
           <Route path="/admin" element={<AdminLogin />} />
 
-          <Route element={<ProtectedRoute />}>
             <Route path="/admin/*" element={<AdminLayout />}>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="add-category" element={<AddCategory />} />
@@ -79,7 +78,6 @@ function AppContent() {
               <Route path="manage-categories" element={<ManageCategories />} />
               <Route path="contacts" element={<AdminContacts />} />
             </Route>
-          </Route>
 
         </Routes>
       </Suspense>

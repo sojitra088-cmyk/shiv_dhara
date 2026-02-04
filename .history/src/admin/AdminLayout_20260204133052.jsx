@@ -1,13 +1,13 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import { supabase } from "../supabase";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/admin");
-  };
+const handleLogout = async () => {
+  await supabase.auth.signOut();
+  navigate("/admin");
+};
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -125,7 +125,7 @@ const AdminLayout = () => {
 
         <div className="px-6 py-6 border-t border-white/10">
           <button
-            onClick={handleLogout}
+            onClick={logout}
             className="flex items-center gap-3 text-red-300 hover:text-red-400 transition"
           >
             <i className="fa-solid fa-right-from-bracket"></i>
