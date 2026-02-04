@@ -6,6 +6,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
 import PageLoader from "./components/PageLoader";
+import WhatsAppFloat from "./components/WhatsAppFloat";
 
 // Lazy load pages
 const Home = lazy(() => import("./pages/Home"));
@@ -85,6 +86,7 @@ function AppContent() {
       </Suspense>
 
       {!isAdmin && <Footer logo="/logo.png" />}
+      {!isAdmin && <WhatsAppFloat />}
     </>
   );
 }
