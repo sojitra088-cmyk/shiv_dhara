@@ -215,7 +215,7 @@ const Contact = () => {
             </div>
         </section>
         {/* ================= CONTACT FORM ================= */}
-      <section
+      <section id="GetInTouch"
         ref={formRef} 
         className="relative bg-white py-28 overflow-hidden contact-form-section"
       >

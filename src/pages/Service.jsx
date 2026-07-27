@@ -248,7 +248,7 @@ const Service = () => {
             </div>
         </section>
 
-        <Services />
+        {/* <Services /> */}
 
         <section className="pt-28 pb-28 bg-white overflow-hidden">
             <div className="max-w-7xl mx-auto px-6">
