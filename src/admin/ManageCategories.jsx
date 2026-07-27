@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -7,6 +7,9 @@ const ManageCategories = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState("");
+
+  const isActionLoading = (type, id) => actionLoading === `${type}-${id}`;
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -28,9 +31,9 @@ const ManageCategories = () => {
     if (!error && data) {
       const formatted = data.map((cat) => ({
         ...cat,
-        subCount: cat.subcategories.length,
-        productCount: cat.subcategories.reduce(
-          (sum, sub) => sum + sub.products.length,
+        subCount: cat.subcategories?.length || 0,
+        productCount: (cat.subcategories || []).reduce(
+          (sum, sub) => sum + (sub.products?.length || 0),
           0
         ),
       }));
@@ -45,9 +48,8 @@ const ManageCategories = () => {
     fetchCategories();
   }, []);
 
-  /* ❌ DELETE CATEGORY */
-  const deleteCategory = async (id, subCount) => {
-    if (subCount > 0) {
+  const deleteCategory = async (category) => {
+    if (category.subCount > 0) {
       Swal.fire({
         icon: "warning",
         title: "Cannot delete",
@@ -58,41 +60,52 @@ const ManageCategories = () => {
 
     const result = await Swal.fire({
       title: "Are you sure?",
-      text: "This category will be permanently deleted!",
+      text: `${category.title} will be permanently deleted!`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#84cc16",
       cancelButtonColor: "#d33",
       confirmButtonText: "Yes, delete",
+      cancelButtonText: "Cancel",
     });
 
     if (!result.isConfirmed) return;
 
-    const { error } = await supabase
-      .from("categories")
-      .delete()
-      .eq("id", id);
+    setActionLoading(`delete-${category.id}`);
 
-    if (error) {
+    try {
+      const { error } = await supabase
+        .from("categories")
+        .delete()
+        .eq("id", category.id);
+
+      if (error) throw error;
+
+      setCategories((prev) => prev.filter((cat) => cat.id !== category.id));
+
+      Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        text: "Category has been deleted.",
+        timer: 1200,
+        showConfirmButton: false,
+      });
+    } catch (error) {
       Swal.fire("Error", error.message, "error");
-      return;
+    } finally {
+      setActionLoading("");
     }
+  };
 
-    Swal.fire({
-      icon: "success",
-      title: "Deleted!",
-      timer: 1200,
-      showConfirmButton: false,
-    });
-
-    fetchCategories();
+  const editCategory = (category) => {
+    setActionLoading(`edit-${category.id}`);
+    navigate(`/admin/add-category?id=${category.id}`);
   };
 
   if (loading) return <p>Loading categories...</p>;
 
   return (
     <div className="bg-white p-8 rounded-xl shadow">
-      {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">Manage Categories</h2>
 
@@ -104,7 +117,6 @@ const ManageCategories = () => {
         </button>
       </div>
 
-      {/* TABLE */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm border">
           <thead className="bg-gray-100">
@@ -120,7 +132,6 @@ const ManageCategories = () => {
           <tbody>
             {categories.map((cat) => (
               <tr key={cat.id} className="border-t">
-                {/* IMAGE */}
                 <td className="p-3">
                   {cat.image ? (
                     <img
@@ -133,40 +144,34 @@ const ManageCategories = () => {
                   )}
                 </td>
 
-                {/* CATEGORY */}
                 <td className="p-3">
                   <p className="font-medium">{cat.title}</p>
                   <p className="text-xs text-gray-500">{cat.slug}</p>
                 </td>
 
-                {/* SUB COUNT */}
                 <td className="p-3 text-center font-semibold">
                   {cat.subCount}
                 </td>
 
-                {/* PRODUCT COUNT */}
                 <td className="p-3 text-center font-semibold">
                   {cat.productCount}
                 </td>
 
-                {/* ACTIONS */}
                 <td className="p-3 text-right space-x-3">
                   <button
-                    onClick={() =>
-                      navigate(`/admin/add-category?id=${cat.id}`)
-                    }
-                    className="text-blue-600 hover:underline"
+                    onClick={() => editCategory(cat)}
+                    disabled={Boolean(actionLoading)}
+                    className="text-blue-600 hover:underline disabled:opacity-50"
                   >
-                    Edit
+                    {isActionLoading("edit", cat.id) ? "Opening..." : "Edit"}
                   </button>
 
                   <button
-                    onClick={() =>
-                      deleteCategory(cat.id, cat.subCount)
-                    }
-                    className="text-red-600 hover:underline"
+                    onClick={() => deleteCategory(cat)}
+                    disabled={Boolean(actionLoading)}
+                    className="text-red-600 hover:underline disabled:opacity-50"
                   >
-                    Delete
+                    {isActionLoading("delete", cat.id) ? "Deleting..." : "Delete"}
                   </button>
                 </td>
               </tr>
@@ -175,9 +180,7 @@ const ManageCategories = () => {
         </table>
 
         {categories.length === 0 && (
-          <p className="text-gray-500 text-center py-6">
-            No categories found
-          </p>
+          <p className="text-gray-500 text-center py-6">No categories found</p>
         )}
       </div>
     </div>
@@ -185,3 +188,4 @@ const ManageCategories = () => {
 };
 
 export default ManageCategories;
+

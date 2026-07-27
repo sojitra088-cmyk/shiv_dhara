@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import ImageUploader from "../components/ImageUpload";
 
-/* 🔹 Slug generator */
 const generateSlug = (text) =>
   text
     .toLowerCase()
@@ -16,10 +15,12 @@ const generateSlug = (text) =>
 const AddCategory = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const editId = searchParams.get("id"); // 👈 edit mode
+  const editId = searchParams.get("id");
   const isEdit = Boolean(editId);
 
   const [step, setStep] = useState(1);
+  const [formLoading, setFormLoading] = useState(isEdit);
+  const [saving, setSaving] = useState(false);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -27,15 +28,14 @@ const AddCategory = () => {
   const [subtitle, setSubtitle] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
+
   const isSlugUnique = async () => {
     let query = supabase
       .from("categories")
       .select("id")
       .eq("slug", slug);
 
-    if (isEdit) {
-      query = query.neq("id", editId);
-    }
+    if (isEdit) query = query.neq("id", editId);
 
     const { data, error } = await query;
     if (error) return false;
@@ -43,11 +43,12 @@ const AddCategory = () => {
     return data.length === 0;
   };
 
-  /* 🔹 LOAD CATEGORY (EDIT MODE) */
   useEffect(() => {
     if (!isEdit) return;
 
     const fetchCategory = async () => {
+      setFormLoading(true);
+
       const { data, error } = await supabase
         .from("categories")
         .select("*")
@@ -56,6 +57,7 @@ const AddCategory = () => {
 
       if (error) {
         Swal.fire("Error", error.message, "error");
+        setFormLoading(false);
         return;
       }
 
@@ -65,32 +67,35 @@ const AddCategory = () => {
       setDescription(data.description || "");
       setImage(data.image || "");
       setStep(1);
+      setFormLoading(false);
     };
 
     fetchCategory();
   }, [editId, isEdit]);
 
-  /* 🔹 SUBMIT (ADD / UPDATE) */
   const submit = async () => {
+    setSaving(true);
+
     if (!title || !slug) {
       Swal.fire("Missing Fields", "Title & slug are required", "warning");
       setStep(1);
+      setSaving(false);
       return;
     }
 
     if (!image) {
       Swal.fire("Image missing", "Please upload an image", "warning");
       setStep(3);
+      setSaving(false);
       return;
     }
 
     const unique = await isSlugUnique();
     if (!unique) {
       Swal.fire("Duplicate Slug", "Slug already exists", "warning");
+      setSaving(false);
       return;
     }
-
-    console.log("IMAGE SAVING TO DB:", image);
 
     const payload = {
       title,
@@ -100,7 +105,7 @@ const AddCategory = () => {
       image: image || null,
     };
 
-    const { data, error } = isEdit
+    const { error } = isEdit
       ? await supabase
           .from("categories")
           .update(payload)
@@ -115,6 +120,7 @@ const AddCategory = () => {
 
     if (error) {
       Swal.fire("Error", error.message, "error");
+      setSaving(false);
       return;
     }
 
@@ -124,26 +130,25 @@ const AddCategory = () => {
       timer: 1500,
       showConfirmButton: false,
     }).then(() => navigate("/admin/manage-categories"));
-  };
 
+    setSaving(false);
+  };
 
   return (
     <div className="max-w-3xl bg-white p-8 rounded-xl shadow">
       <h2 className="text-2xl font-semibold mb-6">
-        {isEdit ? "Edit Category" : "Add Category"}
+        {isEdit ? `Edit Category${title ? `: ${title}` : ""}` : "Add Category"}
       </h2>
 
-      {/* STEP INDICATOR */}
+      {formLoading && <p className="mb-6 text-sm text-gray-500">Loading category...</p>}
+
       <div className="relative mb-12">
         <div className="absolute top-4 left-0 right-0 h-[2px] bg-gray-200" />
 
         <div
           className="absolute top-4 left-0 h-[2px] bg-lime-500 transition-all duration-300"
           style={{
-            width:
-              step === 1 ? "0%" :
-              step === 2 ? "50%" :
-              "100%",
+            width: step === 1 ? "0%" : step === 2 ? "50%" : "100%",
           }}
         />
 
@@ -155,10 +160,11 @@ const AddCategory = () => {
           ].map((item) => (
             <div key={item.id} className="flex flex-col items-center">
               <div
-                className={`w-9 h-9 flex items-center justify-center rounded-full text-sm font-semibold
-                ${step >= item.id
-                  ? "bg-lime-500 text-white"
-                  : "bg-gray-200 text-gray-500"}`}
+                className={`w-9 h-9 flex items-center justify-center rounded-full text-sm font-semibold ${
+                  step >= item.id
+                    ? "bg-lime-500 text-white"
+                    : "bg-gray-200 text-gray-500"
+                }`}
               >
                 {item.id}
               </div>
@@ -174,7 +180,6 @@ const AddCategory = () => {
         </div>
       </div>
 
-      {/* STEP 1 */}
       {step === 1 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Category Name</h3>
@@ -186,8 +191,7 @@ const AddCategory = () => {
             onChange={(e) => {
               const value = e.target.value;
               setTitle(value);
-              if (!slugTouched && !isEdit)
-                setSlug(generateSlug(value));
+              if (!slugTouched && !isEdit) setSlug(generateSlug(value));
             }}
           />
 
@@ -205,7 +209,7 @@ const AddCategory = () => {
             <button
               onClick={() => setStep(2)}
               disabled={!title || !slug}
-              className="bg-lime-500 text-white px-6 py-2 rounded"
+              className="bg-lime-500 text-white px-6 py-2 rounded disabled:opacity-50"
             >
               Next
             </button>
@@ -213,7 +217,6 @@ const AddCategory = () => {
         </div>
       )}
 
-      {/* STEP 2 */}
       {step === 2 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Subtitle & Description</h3>
@@ -251,7 +254,6 @@ const AddCategory = () => {
         </div>
       )}
 
-      {/* STEP 3 */}
       {step === 3 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Category Image</h3>
@@ -263,7 +265,6 @@ const AddCategory = () => {
             folder="categories"
           />
 
-
           <div className="flex justify-between">
             <button
               onClick={() => setStep(2)}
@@ -274,9 +275,10 @@ const AddCategory = () => {
 
             <button
               onClick={submit}
-              className="bg-lime-500 text-white px-6 py-2 rounded"
+              disabled={saving}
+              className="bg-lime-500 text-white px-6 py-2 rounded disabled:opacity-50"
             >
-              {isEdit ? "Update Category" : "Save Category"}
+              {saving ? "Saving..." : isEdit ? "Update Category" : "Save Category"}
             </button>
           </div>
         </div>
@@ -286,3 +288,4 @@ const AddCategory = () => {
 };
 
 export default AddCategory;
+

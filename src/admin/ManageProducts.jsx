@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
 const ManageProducts = () => {
@@ -10,6 +9,9 @@ const ManageProducts = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState("");
+
+  const isActionLoading = (type, id) => actionLoading === `${type}-${id}`;
 
   const viewProduct = async (id) => {
     setViewLoading(true);
@@ -54,23 +56,22 @@ const ManageProducts = () => {
             image_type
           )
         `)
-
         .order("created_at", { ascending: false });
 
-      if (!error) setProducts(data);
+      if (!error) setProducts(data || []);
       setLoading(false);
     };
 
     fetchProducts();
   }, []);
 
-  const deleteProduct = async (id) => {
+  const deleteProduct = async (product) => {
     const result = await Swal.fire({
       title: "Are you sure?",
-      text: "This product will be permanently deleted!",
+      text: `${product.name} will be permanently deleted!`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#84cc16", // lime-500
+      confirmButtonColor: "#84cc16",
       cancelButtonColor: "#d33",
       confirmButtonText: "Yes, delete it",
       cancelButtonText: "Cancel",
@@ -78,28 +79,52 @@ const ManageProducts = () => {
 
     if (!result.isConfirmed) return;
 
-    const { error } = await supabase
-      .from("products")
-      .delete()
-      .eq("id", id);
+    setActionLoading(`delete-${product.id}`);
 
-    if (error) {
+    try {
+      const childTables = [
+        "product_images",
+        "product_usage",
+        "product_specifications",
+        "product_finishes",
+      ];
+
+      for (const table of childTables) {
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .eq("product_id", product.id);
+
+        if (error) throw error;
+      }
+
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", product.id);
+
+      if (error) throw error;
+
+      setProducts((prev) => prev.filter((p) => p.id !== product.id));
+
+      Swal.fire({
+        title: "Deleted!",
+        text: "Product deleted successfully.",
+        icon: "success",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (error) {
       Swal.fire("Error", error.message, "error");
-      return;
+    } finally {
+      setActionLoading("");
     }
-
-    // Remove from UI
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-
-    Swal.fire({
-      title: "Deleted!",
-      text: "Product deleted successfully.",
-      icon: "success",
-      timer: 1800,
-      showConfirmButton: false,
-    });
   };
 
+  const editProduct = (product) => {
+    setActionLoading(`edit-${product.id}`);
+    navigate(`/admin/add-product?id=${product.id}`);
+  };
 
   if (loading) return <p>Loading products...</p>;
 
@@ -129,15 +154,14 @@ const ManageProducts = () => {
           <tbody>
             {products.map((p) => {
               const productImage =
-                p.product_images?.find(img => img.image_type === "product")
+                p.product_images?.find((img) => img.image_type === "product")
                   ?.image_url ||
-                p.product_images?.find(img => img.image_type === "hero")
+                p.product_images?.find((img) => img.image_type === "hero")
                   ?.image_url ||
                 "/placeholder.jpg";
 
               return (
                 <tr key={p.id} className="border-t">
-                  {/* IMAGE */}
                   <td className="px-6 py-4">
                     <img
                       src={productImage}
@@ -146,160 +170,144 @@ const ManageProducts = () => {
                     />
                   </td>
 
-                  {/* NAME */}
                   <td className="px-6 py-4 font-medium">{p.name}</td>
 
-                  {/* CATEGORY */}
                   <td className="px-6 py-4">
-                    {p.subcategories?.categories?.title || "—"}
+                    {p.subcategories?.categories?.title || "-"}
                   </td>
 
-                  {/* ACTIONS */}
                   <td className="px-6 py-4 text-right space-x-4">
                     <button
                       onClick={() => viewProduct(p.id)}
-                      className="text-green-600 hover:underline"
+                      disabled={Boolean(actionLoading)}
+                      className="text-green-600 hover:underline disabled:opacity-50"
                     >
                       View
                     </button>
 
                     <button
-                      onClick={() => navigate(`/admin/add-product?id=${p.id}`)}
-                      className="text-blue-600 hover:underline"
+                      onClick={() => editProduct(p)}
+                      disabled={Boolean(actionLoading)}
+                      className="text-blue-600 hover:underline disabled:opacity-50"
                     >
-                      Edit
+                      {isActionLoading("edit", p.id) ? "Opening..." : "Edit"}
                     </button>
 
                     <button
-                      onClick={() => deleteProduct(p.id)}
-                      className="text-red-600 hover:underline"
+                      onClick={() => deleteProduct(p)}
+                      disabled={Boolean(actionLoading)}
+                      className="text-red-600 hover:underline disabled:opacity-50"
                     >
-                      Delete
+                      {isActionLoading("delete", p.id) ? "Deleting..." : "Delete"}
                     </button>
-
                   </td>
                 </tr>
               );
             })}
           </tbody>
-
         </table>
-            {/* VIEW PRODUCT MODAL */}
-              {selectedProduct && (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6">
-                  <div className="bg-white max-w-5xl w-full rounded-2xl shadow-xl overflow-y-auto max-h-[90vh]">
 
-                    {/* HEADER */}
-                    <div className="flex justify-between items-center px-6 py-4 border-b">
-                      <h2 className="text-xl font-semibold">
-                        {selectedProduct.name}
-                      </h2>
-                      <button
-                        onClick={() => setSelectedProduct(null)}
-                        className="text-gray-500 hover:text-black text-xl"
-                      >
-                        ✕
-                      </button>
+        {selectedProduct && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6">
+            <div className="bg-white max-w-5xl w-full rounded-2xl shadow-xl overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center px-6 py-4 border-b">
+                <h2 className="text-xl font-semibold">{selectedProduct.name}</h2>
+                <button
+                  onClick={() => setSelectedProduct(null)}
+                  className="text-gray-500 hover:text-black text-xl"
+                >
+                  x
+                </button>
+              </div>
+
+              {viewLoading ? (
+                <p className="p-6">Loading...</p>
+              ) : (
+                <div className="p-6 space-y-8">
+                  <div>
+                    <p><strong>Category:</strong> {selectedProduct.subcategories?.categories?.title}</p>
+                    <p><strong>Subcategory:</strong> {selectedProduct.subcategories?.title}</p>
+                    <p className="mt-2 text-gray-600">{selectedProduct.hero_subtitle}</p>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2">Overview</h3>
+                    <p className="text-gray-600">{selectedProduct.overview}</p>
+                  </div>
+
+                  <div className="space-y-6">
+                    {["hero", "product", "gallery"].map((type) => {
+                      const imgs = selectedProduct.product_images.filter(
+                        (i) => i.image_type === type
+                      );
+
+                      if (!imgs.length) return null;
+
+                      return (
+                        <div key={type}>
+                          <h4 className="font-semibold capitalize mb-3">
+                            {type} Images
+                          </h4>
+
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {imgs.map((img, i) => (
+                              <img
+                                key={i}
+                                src={img.image_url}
+                                alt={`${selectedProduct.name} ${type}`}
+                                className="rounded-xl h-40 w-full object-cover border"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2">Usage Areas</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProduct.product_usage.map((u, i) => (
+                        <span
+                          key={i}
+                          className="px-3 py-1 bg-gray-100 rounded-full text-sm"
+                        >
+                          {u.usage_title}
+                        </span>
+                      ))}
                     </div>
+                  </div>
 
-                    {viewLoading ? (
-                      <p className="p-6">Loading...</p>
-                    ) : (
-                      <div className="p-6 space-y-8">
+                  <div>
+                    <h3 className="font-semibold mb-2">Finishes</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProduct.product_finishes.map((f, i) => (
+                        <span
+                          key={i}
+                          className="px-3 py-1 bg-lime-100 text-lime-800 rounded-full text-sm"
+                        >
+                          {f.finish_name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
 
-                        {/* BASIC INFO */}
-                        <div>
-                          <p><strong>Category:</strong> {selectedProduct.subcategories?.categories?.title}</p>
-                          <p><strong>Subcategory:</strong> {selectedProduct.subcategories?.title}</p>
-                          <p className="mt-2 text-gray-600">{selectedProduct.hero_subtitle}</p>
+                  <div>
+                    <h3 className="font-semibold mb-3">Specifications</h3>
+                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                      {selectedProduct.product_specifications.map((s, i) => (
+                        <div key={i} className="flex justify-between border-b pb-1">
+                          <span className="text-gray-500">{s.spec_key}</span>
+                          <span className="font-medium">{s.spec_value}</span>
                         </div>
-
-                        {/* OVERVIEW */}
-                        <div>
-                          <h3 className="font-semibold mb-2">Overview</h3>
-                          <p className="text-gray-600">{selectedProduct.overview}</p>
-                        </div>
-
-                        {/* IMAGES */}
-                        <div className="space-y-6">
-                          {["hero", "product", "gallery"].map((type) => {
-                            const imgs = selectedProduct.product_images.filter(
-                              (i) => i.image_type === type
-                            );
-
-                            if (!imgs.length) return null;
-
-                            return (
-                              <div key={type}>
-                                <h4 className="font-semibold capitalize mb-3">
-                                  {type} Images
-                                </h4>
-
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                  {imgs.map((img, i) => (
-                                    <img
-                                      key={i}
-                                      src={img.image_url}
-                                      className="rounded-xl h-40 w-full object-cover border"
-                                    />
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* USAGE */}
-                        <div>
-                          <h3 className="font-semibold mb-2">Usage Areas</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedProduct.product_usage.map((u, i) => (
-                              <span
-                                key={i}
-                                className="px-3 py-1 bg-gray-100 rounded-full text-sm"
-                              >
-                                {u.usage_title}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* FINISHES */}
-                        <div>
-                          <h3 className="font-semibold mb-2">Finishes</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedProduct.product_finishes.map((f, i) => (
-                              <span
-                                key={i}
-                                className="px-3 py-1 bg-lime-100 text-lime-800 rounded-full text-sm"
-                              >
-                                {f.finish_name}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* SPECIFICATIONS */}
-                        <div>
-                          <h3 className="font-semibold mb-3">Specifications</h3>
-                          <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                            {selectedProduct.product_specifications.map((s, i) => (
-                              <div
-                                key={i}
-                                className="flex justify-between border-b pb-1"
-                              >
-                                <span className="text-gray-500">{s.spec_key}</span>
-                                <span className="font-medium">{s.spec_value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                      </div>
-                    )}
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
 
         {products.length === 0 && (
           <p className="p-6 text-gray-500">No products found.</p>
@@ -310,3 +318,4 @@ const ManageProducts = () => {
 };
 
 export default ManageProducts;
+

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { Fragment, useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -11,18 +11,19 @@ const ManageSubcategories = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState("");
+
+  const isActionLoading = (type, id) => actionLoading === `${type}-${id}`;
 
   const fetchData = async () => {
     setLoading(true);
 
-    // Categories for filter
     const { data: cats } = await supabase
       .from("categories")
       .select("id, title");
 
     setCategories(cats || []);
 
-    // Subcategories with products
     const { data, error } = await supabase
       .from("subcategories")
       .select(`
@@ -43,7 +44,9 @@ const ManageSubcategories = () => {
     fetchData();
   }, []);
 
-  const deleteSubcategory = async (id, productCount) => {
+  const deleteSubcategory = async (subcategory) => {
+    const productCount = subcategory.products?.length || 0;
+
     if (productCount > 0) {
       Swal.fire({
         icon: "warning",
@@ -55,10 +58,10 @@ const ManageSubcategories = () => {
 
     const result = await Swal.fire({
       title: "Are you sure?",
-      text: "This subcategory will be permanently deleted!",
+      text: `${subcategory.title} will be permanently deleted!`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#84cc16", // lime
+      confirmButtonColor: "#84cc16",
       cancelButtonColor: "#d33",
       confirmButtonText: "Yes, delete",
       cancelButtonText: "Cancel",
@@ -66,29 +69,35 @@ const ManageSubcategories = () => {
 
     if (!result.isConfirmed) return;
 
-    const { error } = await supabase
-      .from("subcategories")
-      .delete()
-      .eq("id", id);
+    setActionLoading(`delete-${subcategory.id}`);
 
-    if (error) {
+    try {
+      const { error } = await supabase
+        .from("subcategories")
+        .delete()
+        .eq("id", subcategory.id);
+
+      if (error) throw error;
+
+      setSubcategories((prev) => prev.filter((sub) => sub.id !== subcategory.id));
+
+      Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        text: "Subcategory has been deleted.",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (error) {
       Swal.fire("Error", error.message, "error");
-      return;
+    } finally {
+      setActionLoading("");
     }
-
-    Swal.fire({
-      icon: "success",
-      title: "Deleted!",
-      text: "Subcategory has been deleted.",
-      timer: 1500,
-      showConfirmButton: false,
-    });
-
-    fetchData();
   };
 
-  const editSubcategory = (id) => {
-    navigate(`/admin/edit-subcategory/${id}`);
+  const editSubcategory = (subcategory) => {
+    setActionLoading(`edit-${subcategory.id}`);
+    navigate(`/admin/add-subcategory?id=${subcategory.id}`);
   };
 
   const filtered =
@@ -102,12 +111,8 @@ const ManageSubcategories = () => {
 
   return (
     <div className="bg-white p-8 rounded-xl shadow">
-
-      {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold">
-          Manage Subcategories
-        </h2>
+        <h2 className="text-2xl font-semibold">Manage Subcategories</h2>
 
         <button
           onClick={() => navigate("/admin/add-subcategory")}
@@ -117,7 +122,6 @@ const ManageSubcategories = () => {
         </button>
       </div>
 
-      {/* FILTER */}
       <div className="mb-6">
         <select
           className="border px-4 py-2 rounded"
@@ -133,7 +137,6 @@ const ManageSubcategories = () => {
         </select>
       </div>
 
-      {/* TABLE */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm border">
           <thead className="bg-gray-100">
@@ -149,10 +152,11 @@ const ManageSubcategories = () => {
           <tbody>
             {filtered.map((sub) => {
               const isOpen = expanded === sub.id;
+              const productCount = sub.products?.length || 0;
 
               return (
-                <>
-                  <tr key={sub.id} className="border-t">
+                <Fragment key={sub.id}>
+                  <tr className="border-t">
                     <td className="p-3">
                       {sub.image ? (
                         <img
@@ -167,55 +171,46 @@ const ManageSubcategories = () => {
 
                     <td className="p-3">
                       <p className="font-medium">{sub.title}</p>
-                      <p className="text-xs text-gray-500">
-                        {sub.slug}
-                      </p>
+                      <p className="text-xs text-gray-500">{sub.slug}</p>
                     </td>
 
-                    <td className="p-3">
-                      {sub.categories?.title || "—"}
-                    </td>
+                    <td className="p-3">{sub.categories?.title || "-"}</td>
 
                     <td className="p-3 text-center font-semibold">
-                      {sub.products.length}
+                      {productCount}
                     </td>
 
                     <td className="p-3 text-right space-x-3">
                       <button
-                        onClick={() =>
-                          setExpanded(isOpen ? null : sub.id)
-                        }
-                        className="text-gray-600 hover:underline"
+                        onClick={() => setExpanded(isOpen ? null : sub.id)}
+                        disabled={Boolean(actionLoading)}
+                        className="text-gray-600 hover:underline disabled:opacity-50"
                       >
                         {isOpen ? "Hide" : "View"}
                       </button>
 
                       <button
-                        onClick={() =>
-                          navigate(`/admin/add-subcategory?id=${sub.id}`)
-                        }
-                        className="text-blue-600 hover:underline"
+                        onClick={() => editSubcategory(sub)}
+                        disabled={Boolean(actionLoading)}
+                        className="text-blue-600 hover:underline disabled:opacity-50"
                       >
-                        Edit
+                        {isActionLoading("edit", sub.id) ? "Opening..." : "Edit"}
                       </button>
 
-
                       <button
-                        onClick={() =>
-                          deleteSubcategory(sub.id, sub.products.length)
-                        }
-                        className="text-red-600 hover:underline"
+                        onClick={() => deleteSubcategory(sub)}
+                        disabled={Boolean(actionLoading)}
+                        className="text-red-600 hover:underline disabled:opacity-50"
                       >
-                        Delete
+                        {isActionLoading("delete", sub.id) ? "Deleting..." : "Delete"}
                       </button>
                     </td>
                   </tr>
 
-                  {/* EXPANDED PRODUCTS */}
                   {isOpen && (
                     <tr className="bg-gray-50">
                       <td colSpan="5" className="p-4">
-                        {sub.products.length === 0 ? (
+                        {productCount === 0 ? (
                           <p className="text-gray-500">
                             No products in this subcategory.
                           </p>
@@ -234,7 +229,7 @@ const ManageSubcategories = () => {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </tbody>
@@ -251,3 +246,4 @@ const ManageSubcategories = () => {
 };
 
 export default ManageSubcategories;
+

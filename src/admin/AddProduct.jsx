@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -6,7 +6,7 @@ import usageIcons from "../data/usageIcons";
 import { useSearchParams } from "react-router-dom";
 import ImageUploader from "../components/ImageUpload";
 
-/* 🔹 Slug generator */
+/* ?? Slug generator */
 const generateSlug = (text) =>
   text
     .toLowerCase()
@@ -22,6 +22,8 @@ const AddProduct = () => {
 
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  const [formLoading, setFormLoading] = useState(isEdit);
+  const [saving, setSaving] = useState(false);
 
   /* CATEGORY + SUBCATEGORY */
   const [categories, setCategories] = useState([]);
@@ -108,6 +110,7 @@ const AddProduct = () => {
     if (!isEdit) return;
 
     const loadProduct = async () => {
+      setFormLoading(true);
       const { data, error } = await supabase
       .from("products")
       .select(`
@@ -129,6 +132,7 @@ const AddProduct = () => {
 
       if (error) {
         Swal.fire("Error", error.message, "error");
+        setFormLoading(false);
         return;
       }
 
@@ -167,21 +171,25 @@ const AddProduct = () => {
 
       // SPECS
       setSpecs(
-        data.product_specifications.map(s => ({
-          label: s.spec_key,
-          value: s.spec_value
-        }))
+        data.product_specifications?.length
+          ? data.product_specifications.map(s => ({
+              label: s.spec_key,
+              value: s.spec_value
+            }))
+          : [{ label: "", value: "" }]
       );
+      setFormLoading(false);
     };
 
     loadProduct();
   }, [isEdit, productId]);
 
   const submit = async () => {
+  setSaving(true);
   try {
     let product;
 
-    // 1️⃣ CREATE / UPDATE PRODUCT
+    // 1?? CREATE / UPDATE PRODUCT
     if (isEdit) {
       const { data, error } = await supabase
         .from("products")
@@ -199,7 +207,7 @@ const AddProduct = () => {
       if (error) throw error;
       product = data;
 
-      // 2️⃣ CLEAN OLD CHILD DATA
+      // 2?? CLEAN OLD CHILD DATA
       await supabase.from("product_images").delete().eq("product_id", productId);
       await supabase.from("product_usage").delete().eq("product_id", productId);
       await supabase.from("product_specifications").delete().eq("product_id", productId);
@@ -222,9 +230,9 @@ const AddProduct = () => {
       product = data;
     }
 
-    // 🔥 FROM HERE product.id IS GUARANTEED
+    // ?? FROM HERE product.id IS GUARANTEED
 
-    // 3️⃣ HERO IMAGE
+    // 3?? HERO IMAGE
     const imageRows = [];
 
     if (heroImage?.trim()) {
@@ -248,7 +256,7 @@ const AddProduct = () => {
     }
 
 
-    // 4️⃣ GALLERY
+    // 4?? GALLERY
     const gallery = applications
       .filter(u => typeof u === "string" && u.length > 5)
       .map((url, i) => ({
@@ -264,7 +272,7 @@ const AddProduct = () => {
 
 
 
-    // 5️⃣ USAGE
+    // 5?? USAGE
     const usageRows = [...new Set(usageAreas)]
       .map(u => u.trim())
       .filter(Boolean)
@@ -278,7 +286,7 @@ const AddProduct = () => {
     }
 
 
-    // 6️⃣ FINISH OPTIONS ✅ (THIS WAS MISSING / WRONG)
+    // 6?? FINISH OPTIONS ? (THIS WAS MISSING / WRONG)
     const finishRows = [...new Set(finishes)]
       .map(f => f.trim())
       .filter(Boolean)
@@ -292,7 +300,7 @@ const AddProduct = () => {
     }
 
 
-    // 7️⃣ SPECIFICATIONS
+    // 7?? SPECIFICATIONS
     const specRows = specs
       .filter(s => s.label?.trim() && s.value?.trim())
       .map(s => ({
@@ -316,6 +324,8 @@ const AddProduct = () => {
 
   } catch (err) {
     Swal.fire("Error", err.message, "error");
+  } finally {
+    setSaving(false);
   }
 };
 
@@ -323,8 +333,10 @@ const AddProduct = () => {
   return (
     <div className="max-w-4xl bg-white p-8 rounded-xl shadow">
       <h2 className="text-2xl font-semibold mb-6">
-        {isEdit ? "Edit Product" : "Add Product"}
+        {isEdit ? `Edit Product${name ? `: ${name}` : ""}` : "Add Product"}
       </h2>
+
+      {formLoading && <p className="mb-6 text-sm text-gray-500">Loading product...</p>}
 
 
       {/* STEP INDICATOR */}
@@ -576,7 +588,7 @@ const AddProduct = () => {
                   onClick={() => removeFinish(i)}
                   className="text-red-500"
                 >
-                  ✕
+                  ?
                 </button>
               )}
             </div>
@@ -633,7 +645,7 @@ const AddProduct = () => {
                 }}
               />
 
-              {/* ❌ DELETE ICON */}
+              {/* ? DELETE ICON */}
               {specs.length > 1 && (
                 <button
                   type="button"
@@ -641,7 +653,7 @@ const AddProduct = () => {
                   className="text-red-500 hover:text-red-700"
                   title="Remove specification"
                 >
-                  ✕
+                  ?
                 </button>
               )}
             </div>
@@ -663,9 +675,10 @@ const AddProduct = () => {
             </button>
             <button
               onClick={submit}
-              className="bg-lime-500 text-white px-6 py-2 rounded"
+              disabled={saving}
+              className="bg-lime-500 text-white px-6 py-2 rounded disabled:opacity-50"
             >
-              Save Product
+              {saving ? "Saving..." : isEdit ? "Update Product" : "Save Product"}
             </button>
           </div>
         </div>
@@ -677,3 +690,7 @@ const AddProduct = () => {
 };
 
 export default AddProduct;
+
+
+
+

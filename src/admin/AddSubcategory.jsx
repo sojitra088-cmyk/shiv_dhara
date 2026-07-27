@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import ImageUploader from "../components/ImageUpload";
 
-/* 🔹 Slug generator */
 const generateSlug = (text) =>
   text
     .toLowerCase()
@@ -16,10 +15,12 @@ const generateSlug = (text) =>
 const AddSubcategory = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const editId = searchParams.get("id"); // 👈 detect edit mode
+  const editId = searchParams.get("id");
   const isEdit = Boolean(editId);
 
   const [step, setStep] = useState(1);
+  const [formLoading, setFormLoading] = useState(isEdit);
+  const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState("");
 
@@ -28,13 +29,7 @@ const AddSubcategory = () => {
   const [slugTouched, setSlugTouched] = useState(false);
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      console.log("USER:", data.user);
-    });
-  }, []);
 
-  /* 🔹 Load categories */
   useEffect(() => {
     supabase
       .from("categories")
@@ -42,11 +37,12 @@ const AddSubcategory = () => {
       .then(({ data }) => setCategories(data || []));
   }, []);
 
-  /* 🔹 Load subcategory (EDIT MODE) */
   useEffect(() => {
     if (!isEdit) return;
 
     const fetchSubcategory = async () => {
+      setFormLoading(true);
+
       const { data, error } = await supabase
         .from("subcategories")
         .select("*")
@@ -55,6 +51,7 @@ const AddSubcategory = () => {
 
       if (error) {
         Swal.fire("Error", error.message, "error");
+        setFormLoading(false);
         return;
       }
 
@@ -63,48 +60,64 @@ const AddSubcategory = () => {
       setSlug(data.slug);
       setDescription(data.description || "");
       setImage(data.image || "");
-
-      setStep(2); // ✅ IMPORTANT FIX
+      setStep(1);
+      setFormLoading(false);
     };
 
     fetchSubcategory();
   }, [editId, isEdit]);
 
+  const isSlugUnique = async () => {
+    let query = supabase
+      .from("subcategories")
+      .select("id")
+      .eq("slug", slug);
 
-  /* 🔹 Submit (ADD / UPDATE) */
+    if (isEdit) query = query.neq("id", editId);
+
+    const { data, error } = await query;
+    if (error) return false;
+
+    return data.length === 0;
+  };
+
   const submit = async () => {
+    setSaving(true);
+
     if (!categoryId) {
       Swal.fire("Missing Category", "Select a category", "warning");
       setStep(1);
+      setSaving(false);
       return;
     }
 
     if (!title || !slug) {
       Swal.fire("Missing Fields", "Title & slug required", "warning");
       setStep(2);
+      setSaving(false);
       return;
     }
 
     if (!image) {
       Swal.fire("Image Missing", "Please upload an image", "warning");
       setStep(3);
+      setSaving(false);
       return;
     }
 
     const unique = await isSlugUnique();
     if (!unique) {
       Swal.fire("Duplicate Slug", "Slug already exists", "warning");
+      setSaving(false);
       return;
     }
-
-    console.log("IMAGE URL TO SAVE:", image); // 🔍 DEBUG
 
     const payload = {
       category_id: categoryId,
       title,
       slug,
       description,
-      image, // ✅ NOW GUARANTEED
+      image,
     };
 
     const { error } = isEdit
@@ -113,54 +126,38 @@ const AddSubcategory = () => {
 
     if (error) {
       Swal.fire("Error", error.message, "error");
+      setSaving(false);
       return;
     }
 
     Swal.fire({
       icon: "success",
-      title: isEdit ? "Updated!" : "Added!",
+      title: isEdit ? "Subcategory Updated" : "Subcategory Added",
       timer: 1500,
       showConfirmButton: false,
     }).then(() => navigate("/admin/manage-subcategories"));
+
+    setSaving(false);
   };
-
-
-  const isSlugUnique = async () => {
-  let query = supabase
-    .from("subcategories")
-    .select("id")
-    .eq("slug", slug);
-
-  if (isEdit) {
-    query = query.neq("id", editId); // ignore current record
-  }
-
-  const { data } = await query;
-  return data.length === 0;
-};
 
   return (
     <div className="max-w-3xl bg-white p-8 rounded-xl shadow">
       <h2 className="text-2xl font-semibold mb-6">
-        {isEdit ? "Edit Subcategory" : "Add Subcategory"}
+        {isEdit ? `Edit Subcategory${title ? `: ${title}` : ""}` : "Add Subcategory"}
       </h2>
-      {/* STEP INDICATOR */}
+
+      {formLoading && <p className="mb-6 text-sm text-gray-500">Loading subcategory...</p>}
+
       <div className="relative mb-12">
-        {/* BASE LINE */}
         <div className="absolute top-4 left-0 right-0 h-[2px] bg-gray-200" />
 
-        {/* ACTIVE LINE */}
         <div
           className="absolute top-4 left-0 h-[2px] bg-lime-500 transition-all duration-300"
           style={{
-            width:
-              step === 1 ? "0%" :
-              step === 2 ? "50%" :
-              "100%",
+            width: step === 1 ? "0%" : step === 2 ? "50%" : "100%",
           }}
         />
 
-        {/* STEPS */}
         <div className="relative flex justify-between">
           {[
             { id: 1, label: "Category" },
@@ -169,8 +166,7 @@ const AddSubcategory = () => {
           ].map((item) => (
             <div key={item.id} className="flex flex-col items-center">
               <div
-                className={`w-9 h-9 flex items-center justify-center rounded-full text-sm font-semibold z-10
-                ${
+                className={`w-9 h-9 flex items-center justify-center rounded-full text-sm font-semibold z-10 ${
                   step >= item.id
                     ? "bg-lime-500 text-white"
                     : "bg-gray-200 text-gray-500"
@@ -191,7 +187,6 @@ const AddSubcategory = () => {
         </div>
       </div>
 
-      {/* STEP 1 */}
       {step === 1 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Select Category</h3>
@@ -221,7 +216,6 @@ const AddSubcategory = () => {
         </div>
       )}
 
-      {/* STEP 2 */}
       {step === 2 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Subcategory Details</h3>
@@ -233,8 +227,7 @@ const AddSubcategory = () => {
             onChange={(e) => {
               const value = e.target.value;
               setTitle(value);
-              if (!slugTouched && !isEdit)
-                setSlug(generateSlug(value));
+              if (!slugTouched && !isEdit) setSlug(generateSlug(value));
             }}
           />
 
@@ -267,7 +260,7 @@ const AddSubcategory = () => {
             <button
               onClick={() => setStep(3)}
               disabled={!title || !slug}
-              className="bg-lime-500 text-white px-6 py-2 rounded"
+              className="bg-lime-500 text-white px-6 py-2 rounded disabled:opacity-50"
             >
               Next
             </button>
@@ -275,7 +268,6 @@ const AddSubcategory = () => {
         </div>
       )}
 
-      {/* STEP 3 */}
       {step === 3 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Subcategory Image</h3>
@@ -288,7 +280,6 @@ const AddSubcategory = () => {
             folder="subcategories"
           />
 
-
           <div className="flex justify-between">
             <button
               onClick={() => setStep(2)}
@@ -299,9 +290,10 @@ const AddSubcategory = () => {
 
             <button
               onClick={submit}
-              className="bg-lime-500 text-white px-6 py-2 rounded"
+              disabled={saving}
+              className="bg-lime-500 text-white px-6 py-2 rounded disabled:opacity-50"
             >
-              {isEdit ? "Update Subcategory" : "Save Subcategory"}
+              {saving ? "Saving..." : isEdit ? "Update Subcategory" : "Save Subcategory"}
             </button>
           </div>
         </div>
@@ -311,3 +303,4 @@ const AddSubcategory = () => {
 };
 
 export default AddSubcategory;
+
