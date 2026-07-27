@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { lazy, Suspense, useState } from "react";
 import { AnimatePresence } from "framer-motion";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -95,6 +96,7 @@ function App() {
   return (
     <BrowserRouter>
       <AppContent />
+      <SpeedInsights/>
     </BrowserRouter>
   );
 }
