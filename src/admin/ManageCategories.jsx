@@ -2,6 +2,7 @@
 import { supabase } from "../supabase";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { deleteStorageFile } from "../utils/supabaseHelpers";
 
 const ManageCategories = () => {
   const navigate = useNavigate();
@@ -74,6 +75,14 @@ const ManageCategories = () => {
     setActionLoading(`delete-${category.id}`);
 
     try {
+      if (category.image) {
+        try {
+          await deleteStorageFile(category.image);
+        } catch (error) {
+          console.warn("Failed to delete category image", error.message);
+        }
+      }
+
       const { error } = await supabase
         .from("categories")
         .delete()

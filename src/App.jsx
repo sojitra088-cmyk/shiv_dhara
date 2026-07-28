@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react"
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import SmoothScroll from "./components/SmoothScroll";
 import ScrollToTop from "./components/ScrollToTop";
 import PageLoader from "./components/PageLoader";
 import WhatsAppFloat from "./components/WhatsAppFloat";
@@ -95,7 +96,9 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <SmoothScroll>
+        <AppContent />
+      </SmoothScroll>
       <SpeedInsights/>
     </BrowserRouter>
   );

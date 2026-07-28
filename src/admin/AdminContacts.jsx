@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabase";
+import { confirmDialog, toastSuccess, toastError } from "../components/Toast";
 
 const AdminContacts = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState("");
 
   useEffect(() => {
     fetchMessages();
@@ -22,6 +24,33 @@ const AdminContacts = () => {
       console.error("Supabase error:", err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteMessage = async (id) => {
+    const result = await confirmDialog({
+      title: "Delete message",
+      text: "This message will be permanently deleted.",
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
+    setActionLoading(`delete-${id}`);
+    try {
+      const { error } = await supabase
+        .from("contact_messages")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      setMessages((prev) => prev.filter((message) => message.id !== id));
+      toastSuccess("Deleted", "Message removed.");
+    } catch (err) {
+      toastError("Delete failed", err.message || "Unable to delete message.");
+    } finally {
+      setActionLoading("");
     }
   };
 
@@ -61,6 +90,7 @@ const AdminContacts = () => {
                   <th className="p-3 text-left">Subject</th>
                   <th className="p-3 text-left">Message</th>
                   <th className="p-3 text-left">Date</th>
+                  <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
 
@@ -74,6 +104,15 @@ const AdminContacts = () => {
                     <td className="p-3">{item.message}</td>
                     <td className="p-3 text-sm text-gray-500">
                       {new Date(item.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => deleteMessage(item.id)}
+                        disabled={actionLoading === `delete-${item.id}`}
+                        className="text-red-600 hover:underline disabled:opacity-50"
+                      >
+                        {actionLoading === `delete-${item.id}` ? "Deleting..." : "Delete"}
+                      </button>
                     </td>
                   </tr>
                 ))}

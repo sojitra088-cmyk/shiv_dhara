@@ -28,6 +28,14 @@
   }
 }
 
+/* Admin content scroll behavior */
+.admin-content-scroll {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .animate-slideUp {
   animation: slideUp 2s ease forwards;
 }

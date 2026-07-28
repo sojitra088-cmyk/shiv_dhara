@@ -1,19 +1,12 @@
 ﻿import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
-import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import usageIcons from "../data/usageIcons";
-import { useSearchParams } from "react-router-dom";
 import ImageUploader from "../components/ImageUpload";
-
-/* ?? Slug generator */
-const generateSlug = (text) =>
-  text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
+import PageLoader from "../components/PageLoader";
+import { deleteStorageFile } from "../utils/supabaseHelpers";
+import { generateSlug } from "../utils/slug";
+import { toastSuccess, toastError, toastWarning } from "../components/Toast";
 
 const AddProduct = () => {
   const [searchParams] = useSearchParams();
@@ -23,6 +16,7 @@ const AddProduct = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [formLoading, setFormLoading] = useState(isEdit);
+  const [pageLoading, setPageLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   /* CATEGORY + SUBCATEGORY */
@@ -52,30 +46,114 @@ const AddProduct = () => {
   /* FINISH OPTIONS */
   const [finishes, setFinishes] = useState([""]);
   const addFinish = () => setFinishes([...finishes, ""]);
-
-  const removeFinish = (index) =>
-    setFinishes(finishes.filter((_, i) => i !== index));
+  const removeFinish = (index) => setFinishes(finishes.filter((_, i) => i !== index));
 
   /* SPECIFICATIONS */
   const [specs, setSpecs] = useState([{ label: "", value: "" }]);
-  const removeSpec = (index) =>
-  setSpecs(specs.filter((_, i) => i !== index));
+  const addSpec = () => setSpecs([...specs, { label: "", value: "" }]);
+  const removeSpec = (index) => setSpecs(specs.filter((_, i) => i !== index));
 
-  /* LOAD CATEGORIES */
-  useEffect(() => {
-    supabase
-      .from("categories")
-      .select("id, title")
-      .then(({ data }) => setCategories(data || []));
-  }, []);
+  const isSlugUnique = async () => {
+    if (!slug) return false;
+    let query = supabase.from("products").select("id").eq("slug", slug.trim());
+    if (isEdit) query = query.neq("id", Number(productId));
+    const { data, error } = await query;
+    return !error && Array.isArray(data) && data.length === 0;
+  };
 
-  /* LOAD SUBCATEGORIES */
+  /* LOAD CATEGORIES + SUBCATEGORIES */
   useEffect(() => {
-    supabase
-      .from("subcategories")
-      .select("id, title, category_id")
-      .then(({ data }) => setSubcategories(data || []));
-  }, []);
+    const loadPageData = async () => {
+      setPageLoading(true);
+
+      try {
+        const [categoriesResponse, subcategoriesResponse] = await Promise.all([
+          supabase.from("categories").select("id, title"),
+          supabase.from("subcategories").select("id, title, category_id"),
+        ]);
+
+        if (categoriesResponse.error) throw categoriesResponse.error;
+        if (subcategoriesResponse.error) throw subcategoriesResponse.error;
+
+        setCategories(categoriesResponse.data || []);
+        setSubcategories(subcategoriesResponse.data || []);
+
+        if (isEdit) {
+          setFormLoading(true);
+
+          const { data, error } = await supabase
+            .from("products")
+            .select(`
+              id,
+              name,
+              slug,
+              hero_subtitle,
+              overview,
+              subcategory_id,
+              subcategories ( category_id ),
+              product_images ( image_url, image_type ),
+              product_usage ( usage_title ),
+              product_specifications ( spec_key, spec_value ),
+              product_finishes ( finish_name )
+            `)
+            .eq("id", productId)
+            .single();
+
+          if (error || !data) {
+            toastError("Failed to load product", error?.message || "Please try again.");
+            setFormLoading(false);
+            return;
+          }
+
+          const productImages = data.product_images || [];
+          setName(data.name || "");
+          setSlug(data.slug || "");
+          setSubtitle(data.hero_subtitle || "");
+          setOverview(data.overview || "");
+          setSubcategoryId(data.subcategory_id || "");
+          setCategoryId(data.subcategories?.category_id || "");
+          setFinishes(
+            data.product_finishes?.length
+              ? data.product_finishes.map((f) => f.finish_name)
+              : [""]
+          );
+
+          const hero = productImages.find((i) => i.image_type === "hero");
+          setHeroImage(hero?.image_url || "");
+          setInitialHeroImage(hero?.image_url || "");
+
+          const overviewImg = productImages.find((i) => i.image_type === "product");
+          setOverviewImage(overviewImg?.image_url || "");
+          setInitialOverviewImage(overviewImg?.image_url || "");
+
+          const gallery = productImages
+            .filter((i) => i.image_type === "gallery")
+            .map((i) => i.image_url);
+          setApplications(gallery);
+          setInitialGallery(gallery);
+
+          setUsageAreas(data.product_usage?.map((u) => u.usage_title) || []);
+
+          setSpecs(
+            data.product_specifications?.length
+              ? data.product_specifications.map((s) => ({
+                  label: s.spec_key,
+                  value: s.spec_value,
+                }))
+              : [{ label: "", value: "" }]
+          );
+
+          setFormLoading(false);
+        }
+      } catch (error) {
+        toastError("Failed to load form data", error?.message || "Please try again.");
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
+    loadPageData();
+  }, [isEdit, productId]);
 
   /* FILTER SUBCATEGORIES */
   useEffect(() => {
@@ -101,234 +179,227 @@ const AddProduct = () => {
     );
   };
 
-  /* ADD SPEC ROW */
-  const addSpec = () =>
-    setSpecs([...specs, { label: "", value: "" }]);
-
-
   useEffect(() => {
     if (!isEdit) return;
 
     const loadProduct = async () => {
       setFormLoading(true);
       const { data, error } = await supabase
-      .from("products")
-      .select(`
-        id,
-        name,
-        slug,
-        hero_subtitle,
-        overview,
-        subcategory_id,
-        subcategories ( category_id ),
-        product_images ( image_url, image_type ),
-        product_usage ( usage_title ),
-        product_specifications ( spec_key, spec_value ),
-        product_finishes ( finish_name )
-      `)
-      .eq("id", productId)
-      .single();
+        .from("products")
+        .select(`
+          id,
+          name,
+          slug,
+          hero_subtitle,
+          overview,
+          subcategory_id,
+          subcategories ( category_id ),
+          product_images ( image_url, image_type ),
+          product_usage ( usage_title ),
+          product_specifications ( spec_key, spec_value ),
+          product_finishes ( finish_name )
+        `)
+        .eq("id", productId)
+        .single();
 
-
-      if (error) {
-        Swal.fire("Error", error.message, "error");
+      if (error || !data) {
+        toastError("Failed to load product", error?.message || "Please try again.");
         setFormLoading(false);
         return;
       }
 
-      // BASIC
-      setName(data.name);
-      setSlug(data.slug);
+      const productImages = data.product_images || [];
+      setName(data.name || "");
+      setSlug(data.slug || "");
       setSubtitle(data.hero_subtitle || "");
       setOverview(data.overview || "");
-      setSubcategoryId(data.subcategory_id);
-      setCategoryId(data.subcategories.category_id);
+      setSubcategoryId(data.subcategory_id || "");
+      setCategoryId(data.subcategories?.category_id || "");
       setFinishes(
         data.product_finishes?.length
-          ? data.product_finishes.map(f => f.finish_name)
+          ? data.product_finishes.map((f) => f.finish_name)
           : [""]
       );
 
-
-      // HERO IMAGE
-      const hero = data.product_images.find(i => i.image_type === "hero");
+      const hero = productImages.find((i) => i.image_type === "hero");
       setHeroImage(hero?.image_url || "");
-      // OVERVIEW IMAGE
-      const overviewImg = data.product_images.find(
-        i => i.image_type === "product"
-      );
+      setInitialHeroImage(hero?.image_url || "");
+
+      const overviewImg = productImages.find((i) => i.image_type === "product");
       setOverviewImage(overviewImg?.image_url || "");
+      setInitialOverviewImage(overviewImg?.image_url || "");
 
-      // GALLERY
-      const gallery = data.product_images
-        .filter(i => i.image_type === "gallery")
-        .map(i => i.image_url);
+      const gallery = productImages
+        .filter((i) => i.image_type === "gallery")
+        .map((i) => i.image_url);
       setApplications(gallery);
+      setInitialGallery(gallery);
 
+      setUsageAreas(data.product_usage?.map((u) => u.usage_title) || []);
 
-      // USAGE
-      setUsageAreas(data.product_usage.map(u => u.usage_title));
-
-      // SPECS
       setSpecs(
         data.product_specifications?.length
-          ? data.product_specifications.map(s => ({
+          ? data.product_specifications.map((s) => ({
               label: s.spec_key,
-              value: s.spec_value
+              value: s.spec_value,
             }))
           : [{ label: "", value: "" }]
       );
+
       setFormLoading(false);
     };
 
     loadProduct();
   }, [isEdit, productId]);
 
+  const [initialHeroImage, setInitialHeroImage] = useState("");
+  const [initialOverviewImage, setInitialOverviewImage] = useState("");
+  const [initialGallery, setInitialGallery] = useState([]);
+
   const submit = async () => {
-  setSaving(true);
-  try {
-    let product;
+    setSaving(true);
 
-    // 1?? CREATE / UPDATE PRODUCT
-    if (isEdit) {
-      const { data, error } = await supabase
-        .from("products")
-        .update({
-          name,
-          slug,
-          hero_subtitle: subtitle,
-          overview,
-          subcategory_id: subcategoryId
-        })
-        .eq("id", productId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      product = data;
-
-      // 2?? CLEAN OLD CHILD DATA
-      await supabase.from("product_images").delete().eq("product_id", productId);
-      await supabase.from("product_usage").delete().eq("product_id", productId);
-      await supabase.from("product_specifications").delete().eq("product_id", productId);
-      await supabase.from("product_finishes").delete().eq("product_id", productId);
-
-    } else {
-      const { data, error } = await supabase
-        .from("products")
-        .insert([{
-          name,
-          slug,
-          hero_subtitle: subtitle,
-          overview,
-          subcategory_id: subcategoryId
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      product = data;
+    if (!categoryId || !subcategoryId) {
+      toastWarning("Missing category", "Please select a category and subcategory.");
+      setStep(1);
+      setSaving(false);
+      return;
     }
 
-    // ?? FROM HERE product.id IS GUARANTEED
-
-    // 3?? HERO IMAGE
-    const imageRows = [];
-
-    if (heroImage?.trim()) {
-      imageRows.push({
-        product_id: product.id,
-        image_url: heroImage.trim(),
-        image_type: "hero"
-      });
+    if (!name || !slug) {
+      toastWarning("Missing fields", "Product name and slug are required.");
+      setStep(2);
+      setSaving(false);
+      return;
     }
 
-    if (overviewImage?.trim()) {
-      imageRows.push({
-        product_id: product.id,
-        image_url: overviewImage.trim(),
-        image_type: "product"
-      });
+    const unique = await isSlugUnique();
+    if (!unique) {
+      toastWarning("Duplicate slug", "A product with this slug already exists.");
+      setSaving(false);
+      return;
     }
 
-    if (imageRows.length) {
-      await supabase.from("product_images").insert(imageRows);
+    if (!heroImage) {
+      toastWarning("Hero image missing", "Upload a hero image before saving.");
+      setStep(2);
+      setSaving(false);
+      return;
     }
 
+    try {
+      let product;
 
-    // 4?? GALLERY
-    const gallery = applications
-      .filter(u => typeof u === "string" && u.length > 5)
-      .map((url, i) => ({
-        product_id: product.id,
-        image_url: url,
-        image_type: "gallery",
-        sort_order: i
-      }));
+      if (isEdit) {
+        const { data, error } = await supabase
+          .from("products")
+          .update({
+            name: name.trim(),
+            slug: slug.trim(),
+            hero_subtitle: subtitle.trim() || null,
+            overview: overview.trim() || null,
+            subcategory_id: subcategoryId,
+          })
+          .eq("id", Number(productId))
+          .select()
+          .single();
 
-    if (gallery.length) {
-      await supabase.from("product_images").insert(gallery);
+        if (error) throw error;
+        product = data;
+
+        const imageUrls = [initialHeroImage, initialOverviewImage, ...initialGallery].filter(Boolean);
+        const removedUrls = imageUrls.filter((url) => {
+          if (url === heroImage || url === overviewImage) return false;
+          if (initialGallery.includes(url) && applications.includes(url)) return false;
+          return true;
+        });
+
+        for (const url of removedUrls) {
+          try {
+            await deleteStorageFile(url);
+          } catch (error) {
+            console.warn("Could not remove old product image", error.message);
+          }
+        }
+
+        const productIdValue = Number(productId);
+        await supabase.from("product_images").delete().eq("product_id", productIdValue);
+        await supabase.from("product_usage").delete().eq("product_id", productIdValue);
+        await supabase.from("product_specifications").delete().eq("product_id", productIdValue);
+        await supabase.from("product_finishes").delete().eq("product_id", productIdValue);
+      } else {
+        const { data, error } = await supabase
+          .from("products")
+          .insert([{ 
+            name: name.trim(),
+            slug: slug.trim(),
+            hero_subtitle: subtitle.trim() || null,
+            overview: overview.trim() || null,
+            subcategory_id: subcategoryId,
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        product = data;
+      }
+
+      const imageRows = [];
+      if (heroImage?.trim()) {
+        imageRows.push({ product_id: product.id, image_url: heroImage.trim(), image_type: "hero" });
+      }
+      if (overviewImage?.trim()) {
+        imageRows.push({ product_id: product.id, image_url: overviewImage.trim(), image_type: "product" });
+      }
+      if (imageRows.length) {
+        await supabase.from("product_images").insert(imageRows);
+      }
+
+      const galleryRows = applications
+        .filter((url) => typeof url === "string" && url.length > 5)
+        .map((url, i) => ({ product_id: product.id, image_url: url, image_type: "gallery", sort_order: i }));
+
+      if (galleryRows.length) {
+        await supabase.from("product_images").insert(galleryRows);
+      }
+
+      const usageRows = [...new Set(usageAreas)]
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .map((u) => ({ product_id: product.id, usage_title: u }));
+
+      if (usageRows.length) {
+        await supabase.from("product_usage").insert(usageRows);
+      }
+
+      const finishRows = [...new Set(finishes)]
+        .map((f) => f.trim())
+        .filter(Boolean)
+        .map((f) => ({ product_id: product.id, finish_name: f }));
+
+      if (finishRows.length) {
+        await supabase.from("product_finishes").insert(finishRows);
+      }
+
+      const specRows = specs
+        .filter((s) => s.label?.trim() && s.value?.trim())
+        .map((s) => ({ product_id: product.id, spec_key: s.label.trim(), spec_value: s.value.trim() }));
+
+      if (specRows.length) {
+        await supabase.from("product_specifications").insert(specRows);
+      }
+
+      toastSuccess("Saved successfully", isEdit ? "Product updated." : "Product created.");
+      navigate("/admin/manage-products");
+    } catch (err) {
+      toastError("Save failed", err.message || "Unable to save product.");
+    } finally {
+      setSaving(false);
     }
+  };
 
 
-
-    // 5?? USAGE
-    const usageRows = [...new Set(usageAreas)]
-      .map(u => u.trim())
-      .filter(Boolean)
-      .map(u => ({
-        product_id: product.id,
-        usage_title: u
-      }));
-
-    if (usageRows.length) {
-      await supabase.from("product_usage").insert(usageRows);
-    }
-
-
-    // 6?? FINISH OPTIONS ? (THIS WAS MISSING / WRONG)
-    const finishRows = [...new Set(finishes)]
-      .map(f => f.trim())
-      .filter(Boolean)
-      .map(f => ({
-        product_id: product.id,
-        finish_name: f
-      }));
-
-    if (finishRows.length) {
-      await supabase.from("product_finishes").insert(finishRows);
-    }
-
-
-    // 7?? SPECIFICATIONS
-    const specRows = specs
-      .filter(s => s.label?.trim() && s.value?.trim())
-      .map(s => ({
-        product_id: product.id,
-        spec_key: s.label.trim(),
-        spec_value: s.value.trim()
-      }));
-
-    if (specRows.length) {
-      await supabase.from("product_specifications").insert(specRows);
-    }
-
-
-    Swal.fire(
-      "Success",
-      isEdit ? "Product updated successfully" : "Product added successfully",
-      "success"
-    );
-
-    navigate("/admin/manage-products");
-
-  } catch (err) {
-    Swal.fire("Error", err.message, "error");
-  } finally {
-    setSaving(false);
-  }
-};
-
+  if (pageLoading) return <PageLoader />;
 
   return (
     <div className="max-w-4xl bg-white p-8 rounded-xl shadow">

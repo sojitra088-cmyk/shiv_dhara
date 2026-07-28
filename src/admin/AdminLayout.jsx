@@ -15,10 +15,10 @@ const AdminLayout = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gray-100">
+    <div className="relative h-screen bg-gray-100 overflow-hidden">
 
       {/* SIDEBAR */}
-      <aside className="w-64 bg-[#0C3D63] text-white flex flex-col">
+      <aside className="fixed left-0 top-0 bottom-0 w-64 bg-[#0C3D63] text-white flex flex-col overflow-y-auto">
         <div className="px-6 py-6 border-b border-white/10">
           <h1 className="text-2xl font-bold tracking-wide">
             ShivDhara
@@ -135,8 +135,10 @@ const AdminLayout = () => {
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 p-10">
-        <Outlet />
+      <main className="absolute top-0 right-0 bottom-0 left-64 overflow-y-auto admin-content-scroll">
+        <div className="min-h-full p-10 overflow-x-hidden">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

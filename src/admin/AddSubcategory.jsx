@@ -1,16 +1,11 @@
 ﻿import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import Swal from "sweetalert2";
 import ImageUploader from "../components/ImageUpload";
-
-const generateSlug = (text) =>
-  text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
+import PageLoader from "../components/PageLoader";
+import { deleteStorageFile } from "../utils/supabaseHelpers";
+import { generateSlug } from "../utils/slug";
+import { toastSuccess, toastError, toastWarning } from "../components/Toast";
 
 const AddSubcategory = () => {
   const navigate = useNavigate();
@@ -20,6 +15,7 @@ const AddSubcategory = () => {
 
   const [step, setStep] = useState(1);
   const [formLoading, setFormLoading] = useState(isEdit);
+  const [pageLoading, setPageLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState("");
@@ -29,6 +25,7 @@ const AddSubcategory = () => {
   const [slugTouched, setSlugTouched] = useState(false);
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
+  const [initialImage, setInitialImage] = useState("");
 
   useEffect(() => {
     supabase
@@ -38,10 +35,14 @@ const AddSubcategory = () => {
   }, []);
 
   useEffect(() => {
-    if (!isEdit) return;
+    if (!isEdit) {
+      setPageLoading(false);
+      return;
+    }
 
     const fetchSubcategory = async () => {
       setFormLoading(true);
+      setPageLoading(true);
 
       const { data, error } = await supabase
         .from("subcategories")
@@ -50,8 +51,9 @@ const AddSubcategory = () => {
         .single();
 
       if (error) {
-        Swal.fire("Error", error.message, "error");
+        toastError("Failed to load subcategory", error.message || "Please try again.");
         setFormLoading(false);
+        setPageLoading(false);
         return;
       }
 
@@ -60,8 +62,10 @@ const AddSubcategory = () => {
       setSlug(data.slug);
       setDescription(data.description || "");
       setImage(data.image || "");
+      setInitialImage(data.image || "");
       setStep(1);
       setFormLoading(false);
+      setPageLoading(false);
     };
 
     fetchSubcategory();
@@ -85,21 +89,21 @@ const AddSubcategory = () => {
     setSaving(true);
 
     if (!categoryId) {
-      Swal.fire("Missing Category", "Select a category", "warning");
+      toastWarning("Missing category", "Please select a category.");
       setStep(1);
       setSaving(false);
       return;
     }
 
     if (!title || !slug) {
-      Swal.fire("Missing Fields", "Title & slug required", "warning");
+      toastWarning("Missing fields", "Title and slug are required.");
       setStep(2);
       setSaving(false);
       return;
     }
 
     if (!image) {
-      Swal.fire("Image Missing", "Please upload an image", "warning");
+      toastWarning("Image missing", "Please upload an image.");
       setStep(3);
       setSaving(false);
       return;
@@ -107,38 +111,58 @@ const AddSubcategory = () => {
 
     const unique = await isSlugUnique();
     if (!unique) {
-      Swal.fire("Duplicate Slug", "Slug already exists", "warning");
+      toastWarning("Duplicate slug", "That slug is already in use.");
       setSaving(false);
       return;
     }
 
     const payload = {
       category_id: categoryId,
-      title,
-      slug,
-      description,
-      image,
+      title: title.trim(),
+      slug: slug.trim(),
+      description: description.trim() || null,
+      image: image || null,
     };
 
-    const { error } = isEdit
-      ? await supabase.from("subcategories").update(payload).eq("id", editId)
-      : await supabase.from("subcategories").insert([payload]);
+    try {
+      if (isEdit) {
+        if (initialImage && initialImage !== image) {
+          try {
+            await deleteStorageFile(initialImage, "product-images");
+          } catch (error) {
+            console.warn("Failed to delete old subcategory image", error.message);
+          }
+        }
 
-    if (error) {
-      Swal.fire("Error", error.message, "error");
+        const { data, error } = await supabase
+          .from("subcategories")
+          .update(payload)
+          .eq("id", editId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        toastSuccess("Subcategory updated", `${data.title} has been updated.`);
+      } else {
+        const { data, error } = await supabase
+          .from("subcategories")
+          .insert([payload])
+          .select()
+          .single();
+
+        if (error) throw error;
+        toastSuccess("Subcategory added", `${data.title} has been created.`);
+      }
+
+      navigate("/admin/manage-subcategories");
+    } catch (error) {
+      toastError("Save failed", error.message || "Unable to save subcategory.");
+    } finally {
       setSaving(false);
-      return;
     }
-
-    Swal.fire({
-      icon: "success",
-      title: isEdit ? "Subcategory Updated" : "Subcategory Added",
-      timer: 1500,
-      showConfirmButton: false,
-    }).then(() => navigate("/admin/manage-subcategories"));
-
-    setSaving(false);
   };
+
+  if (pageLoading) return <PageLoader />;
 
   return (
     <div className="max-w-3xl bg-white p-8 rounded-xl shadow">

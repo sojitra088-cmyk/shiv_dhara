@@ -2,6 +2,7 @@
 import { supabase } from "../supabase";
 import { Link, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { deleteStorageFile } from "../utils/supabaseHelpers";
 
 const ManageProducts = () => {
   const navigate = useNavigate();
@@ -40,28 +41,32 @@ const ManageProducts = () => {
     setViewLoading(false);
   };
 
+  const fetchProducts = async () => {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("products")
+      .select(`
+        id,
+        name,
+        slug,
+        subcategories (
+          categories ( title )
+        ),
+        product_images (
+          image_url,
+          image_type
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      setProducts(data || []);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchProducts = async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select(`
-          id,
-          name,
-          slug,
-          subcategories (
-            categories ( title )
-          ),
-          product_images (
-            image_url,
-            image_type
-          )
-        `)
-        .order("created_at", { ascending: false });
-
-      if (!error) setProducts(data || []);
-      setLoading(false);
-    };
-
     fetchProducts();
   }, []);
 
@@ -82,6 +87,23 @@ const ManageProducts = () => {
     setActionLoading(`delete-${product.id}`);
 
     try {
+      const { data: images, error: imageError } = await supabase
+        .from("product_images")
+        .select("image_url")
+        .eq("product_id", product.id);
+
+      if (!imageError && Array.isArray(images)) {
+        for (const image of images) {
+          if (image.image_url) {
+            try {
+              await deleteStorageFile(image.image_url);
+            } catch (warning) {
+              console.warn("Failed to delete product image", warning.message);
+            }
+          }
+        }
+      }
+
       const childTables = [
         "product_images",
         "product_usage",
@@ -89,11 +111,13 @@ const ManageProducts = () => {
         "product_finishes",
       ];
 
+      const productIdValue = Number(product.id);
+
       for (const table of childTables) {
         const { error } = await supabase
           .from(table)
           .delete()
-          .eq("product_id", product.id);
+          .eq("product_id", productIdValue);
 
         if (error) throw error;
       }
@@ -101,11 +125,15 @@ const ManageProducts = () => {
       const { error } = await supabase
         .from("products")
         .delete()
-        .eq("id", product.id);
+        .eq("id", productIdValue);
 
       if (error) throw error;
 
-      setProducts((prev) => prev.filter((p) => p.id !== product.id));
+      if (selectedProduct?.id === product.id) {
+        setSelectedProduct(null);
+      }
+
+      await fetchProducts();
 
       Swal.fire({
         title: "Deleted!",

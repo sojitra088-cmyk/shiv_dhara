@@ -1,67 +1,67 @@
-import { useState } from "react";
-import { supabase } from "../supabase";
+import { useEffect, useState } from "react";
+import { uploadStorageFile, validateImageFile } from "../utils/supabaseHelpers";
+import { toastError } from "../components/Toast";
 
 const ImageUploader = ({
   label,
   value,
   onChange,
   folder = "products",
-  multiple = false
+  bucket = "product-images",
+  multiple = false,
 }) => {
   const [uploading, setUploading] = useState(false);
   const [previews, setPreviews] = useState([]);
+  const [progress, setProgress] = useState(0);
 
-  // Upload one file
-  const uploadFile = async (file) => {
-    const ext = file.name.split(".").pop();
-    const fileName = `${folder}/${Date.now()}-${Math.random()}.${ext}`;
+  useEffect(() => {
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview));
+    };
+  }, [previews]);
 
-    const { error } = await supabase.storage
-      .from("product-images")
-      .upload(fileName, file);
-
-    if (error) throw error;
-
-    const { data } = supabase.storage
-      .from("product-images")
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
-  };
-
-  // Handle selected / dropped files
   const handleFiles = async (files) => {
     const fileArray = Array.from(files);
+    const invalid = fileArray.find((file) => validateImageFile(file));
 
-    // 1️⃣ SHOW LOCAL PREVIEW IMMEDIATELY
-    const localPreviews = fileArray.map((file) =>
-      URL.createObjectURL(file)
-    );
+    if (invalid) {
+      toastError("Invalid image", validateImageFile(invalid));
+      return;
+    }
 
+    const localPreviews = fileArray.map((file) => URL.createObjectURL(file));
     if (multiple) {
       setPreviews((prev) => [...prev, ...localPreviews]);
     } else {
       setPreviews(localPreviews);
     }
 
-    // 2️⃣ UPLOAD TO SUPABASE
     setUploading(true);
+    setProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => Math.min(prev + 14, 90));
+    }, 180);
 
     try {
       const uploadedUrls = [];
       for (let file of fileArray) {
-        const url = await uploadFile(file);
-        uploadedUrls.push(url);
+        const { publicUrl } = await uploadStorageFile(file, { bucket, folder });
+        uploadedUrls.push(publicUrl);
       }
 
-      // 3️⃣ SAVE URL TO PARENT STATE
       if (multiple) {
         onChange([...(value || []), ...uploadedUrls]);
       } else {
         onChange(uploadedUrls[0]);
       }
+      setProgress(100);
+    } catch (err) {
+      toastError("Upload failed", err.message || "Try again later.");
     } finally {
+      clearInterval(progressInterval);
       setUploading(false);
+      setTimeout(() => setProgress(0), 300);
     }
   };
 
@@ -69,18 +69,13 @@ const ImageUploader = ({
     <div className="space-y-3">
       <p className="font-medium">{label}</p>
 
-      {/* DROP ZONE */}
       <div
         onDrop={(e) => {
           e.preventDefault();
           handleFiles(e.dataTransfer.files);
         }}
         onDragOver={(e) => e.preventDefault()}
-        className="
-          border-2 border-dashed border-gray-300
-          rounded-xl p-6 text-center cursor-pointer
-          hover:border-lime-500 transition
-        "
+        className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-lime-500 transition"
       >
         <input
           type="file"
@@ -92,38 +87,36 @@ const ImageUploader = ({
         />
 
         <label htmlFor={label} className="cursor-pointer block">
-          {uploading
-            ? "Uploading image..."
-            : "Drag & Drop image here or Click to browse"}
+          {uploading ? "Uploading image..." : "Drag & Drop image here or Click to browse"}
         </label>
+
+        {uploading && (
+          <div className="mt-4">
+            <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-lime-500 transition-all" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="mt-2 text-xs text-gray-500">{progress}%</p>
+          </div>
+        )}
       </div>
 
-      {/* 🔥 PREVIEW SECTION */}
       <div className="grid grid-cols-3 gap-3">
-        {/* LOCAL PREVIEW (INSTANT) */}
         {previews.map((src, i) => (
           <img
             key={`preview-${i}`}
             src={src}
+            alt={`preview-${i}`}
             className="h-24 rounded-lg object-cover border"
           />
         ))}
 
-        {/* SAVED IMAGE (EDIT MODE / AFTER UPLOAD) */}
         {!multiple && value && previews.length === 0 && (
-          <img
-            src={value}
-            className="h-24 rounded-lg object-cover border"
-          />
+          <img src={value} alt="saved" className="h-24 rounded-lg object-cover border" />
         )}
 
         {multiple && value?.length > 0 && previews.length === 0 &&
           value.map((img, i) => (
-            <img
-              key={`saved-${i}`}
-              src={img}
-              className="h-24 rounded-lg object-cover border"
-            />
+            <img key={`saved-${i}`} src={img} alt={`saved-${i}`} className="h-24 rounded-lg object-cover border" />
           ))}
       </div>
     </div>
