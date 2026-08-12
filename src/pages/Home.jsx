@@ -206,7 +206,27 @@ const Home = () => {
             luxurious interiors and architectural masterpieces.
           </p> */}
 
-          <ProductSlider products={marbleProducts} />
+          <ProductSlider
+            products={marbleProducts}
+
+            /* Desktop */
+            desktopSlides={3}
+
+            /* Mobile */
+            mobileGrid={true}
+            mobileGridColumns={2}
+            mobileGridrow={2}
+            mobileSliderSlides={1.15}
+            mobileView="grid"
+
+            /* View All */
+            showViewAll={true}
+            viewAllText="View All"
+            viewAllLink="/products/marble"
+
+            /* Mobile [▦] [☷] */
+            showViewSwitcher={true}
+          />
         </div>
 
       </section>
@@ -233,7 +253,25 @@ const Home = () => {
             commercial space stronger and more sophisticated.
           </p> */}
 
-          <ProductSlider products={graniteProducts} />
+          <ProductSlider products={graniteProducts} 
+            /* Desktop */
+            desktopSlides={3}
+
+            /* Mobile */
+            mobileGrid={true}
+            mobileGridColumns={2}
+            mobileGridrow={2}
+            mobileSliderSlides={1.15}
+            mobileView="grid"
+
+            /* View All */
+            showViewAll={true}
+            viewAllText="View All"
+            viewAllLink="/products/granite"
+
+            /* Mobile [▦] [☷] */
+            showViewSwitcher={true}
+          />
         </div>
 
       </section>
@@ -259,7 +297,25 @@ const Home = () => {
             lifestyle.
           </p> */}
 
-          <ProductSlider products={tilesProducts} />
+          <ProductSlider products={tilesProducts} 
+            /* Desktop */
+            desktopSlides={3}
+
+            /* Mobile */
+            mobileGrid={true}
+            mobileGridColumns={2}
+            mobileGridrow={2}
+            mobileSliderSlides={1.15}
+            mobileView="grid"
+
+            /* View All */
+            showViewAll={true}
+            viewAllText="View All"
+            viewAllLink="/products/tiles"
+
+            /* Mobile [▦] [☷] */
+            showViewSwitcher={true}
+          />
         </div>
 
       </section>
@@ -285,7 +341,25 @@ const Home = () => {
             everyday experience.
           </p> */}
 
-          <ProductSlider products={bathwareProducts} />
+          <ProductSlider products={bathwareProducts} 
+            /* Desktop */
+            desktopSlides={3}
+
+            /* Mobile */
+            mobileGrid={true}
+            mobileGridColumns={2}
+            mobileGridrow={2}
+            mobileSliderSlides={1.15}
+            mobileView="grid"
+
+            /* View All */
+            showViewAll={true}
+            viewAllText="View All"
+            viewAllLink="/products/bathware"
+
+            /* Mobile [▦] [☷] */
+            showViewSwitcher={true}
+          />
         </div>
 
       </section>

@@ -201,43 +201,101 @@ const CategoryProducts = () => {
         {filteredProducts.length === 0 ? (
           <p className="text-gray-500">No products found.</p>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div
+            className="
+              grid
+              grid-cols-2
+              sm:grid-cols-2
+              md:grid-cols-3
+              lg:grid-cols-4
+              gap-4
+              sm:gap-5
+              md:gap-7
+              lg:gap-10
+            "
+          >
             {filteredProducts.map((product) => {
-              // ✅ IMAGE LOGIC (MUST BE INSIDE MAP)
-              const productImage = product.product_images
-                ?.filter((img) => img.image_type === "product")[0]
-                ?.image_url || "/placeholder.jpg";
 
-
+              // IMAGE
+              const productImage =
+                product.product_images
+                  ?.filter((img) => img.image_type === "product")[0]
+                  ?.image_url || "/placeholder.jpg";
 
               return (
                 <Link
-                    key={product.id}
-                    to={`/products/${category}/${product.slug}`}
-                    className="group block"
-                  >
-                    {/* IMAGE */}
-                    <div className="bg-white rounded-2xl p-4">
-                      <div className="h-[420px] rounded-xl overflow-hidden bg-gray-100">
-                        <img
-                          src={productImage}
-                          alt={product.name}
-                          className="
-                            w-full h-full object-cover
-                            transition-transform duration-500
-                            group-hover:scale-105
-                          "
-                        />
-                      </div>
+                  key={product.id}
+                  to={`/products/${category}/${product.slug}`}
+                  className="group block min-w-0"
+                >
+
+                  {/* IMAGE CONTAINER */}
+                  <div className="bg-white rounded-xl sm:rounded-2xl p-2 sm:p-3 lg:p-4">
+
+                    <div
+                      className="
+                        w-full
+                        h-[220px]
+                        sm:h-[280px]
+                        md:h-[320px]
+                        lg:h-[320px]
+                        xl:h-[320px]
+                        rounded-lg
+                        sm:rounded-xl
+                        overflow-hidden
+                        bg-gray-100
+                      "
+                    >
+
+                      <img
+                        src={productImage}
+                        alt={product.name}
+                        className="
+                          w-full
+                          h-full
+                          object-cover
+                          transition-transform
+                          duration-500
+                          group-hover:scale-105
+                        "
+                      />
+
                     </div>
 
-                    {/* PRODUCT NAME */}
-                    <h3 className="mt-5 text-center text-sm font-medium tracking-[0.3em] uppercase text-gray-900">
-                      {product.name}
-                    </h3>
-                  </Link>
+                  </div>
 
 
+                  {/* PRODUCT NAME */}
+                  <h3
+                    className="
+                      mt-3
+                      sm:mt-4
+                      lg:mt-5
+
+                      text-center
+
+                      text-[10px]
+                      sm:text-xs
+                      md:text-sm
+
+                      font-medium
+
+                      tracking-[0.12em]
+                      sm:tracking-[0.2em]
+                      lg:tracking-[0.3em]
+
+                      uppercase
+                      text-gray-900
+
+                      line-clamp-2
+
+                      leading-relaxed
+                    "
+                  >
+                    {product.name}
+                  </h3>
+
+                </Link>
               );
             })}
           </div>
@@ -259,7 +317,17 @@ const CategoryProducts = () => {
                 Other Collections
               </h2>
 
-              <ProductSlider products={otherProducts} />
+              <ProductSlider products={otherProducts} 
+                /* Desktop */
+                desktopSlides={3}
+
+                /* Mobile */
+                mobileGrid={true}
+                mobileGridColumns={2}
+                mobileGridrow={2}
+                mobileSliderSlides={1.15}
+                mobileView="grid"
+              />
             </div>
           </section>
         )}
