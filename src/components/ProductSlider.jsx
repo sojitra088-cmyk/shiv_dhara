@@ -630,6 +630,7 @@ const ProductSlider = ({
           hidden
           md:block
           relative
+          overflow-x-hidden
         "
       >
 

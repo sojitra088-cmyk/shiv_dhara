@@ -88,7 +88,7 @@ const Home = () => {
           >
             <div className="max-w-3xl">
 
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif leading-tight text-white">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif leading-tight text-white">
                 Premium Marble <br />
                 <span className="italic font-light text-white/70">
                   Collection
@@ -148,7 +148,7 @@ const Home = () => {
               About Shivdhara
             </p>
 
-            <h1 className="text-5xl md:text-6xl font-serif leading-tight text-gray-900">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif leading-tight text-gray-900">
               Remarkable Spaces, <br />
               <span className="italic font-light text-neutral-400">
                 Guided by Lifestyle
@@ -193,7 +193,7 @@ const Home = () => {
             Premium Marble
           </p>
 
-          <h1 className="text-5xl md:text-6xl font-serif leading-tight text-gray-900">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif leading-tight text-gray-900">
             Timeless Marble, <br />
             <span className="italic font-light text-neutral-400">
               Crafted by Nature
@@ -240,7 +240,7 @@ const Home = () => {
             Premium Granite
           </p>
 
-          <h1 className="text-5xl md:text-6xl font-serif leading-tight text-gray-900">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif leading-tight text-gray-900">
             Strength in Stone, <br />
             <span className="italic font-light text-neutral-400">
               Built to Last
@@ -284,7 +284,7 @@ const Home = () => {
             Designer Tiles
           </p>
 
-          <h1 className="text-5xl md:text-6xl font-serif leading-tight text-gray-900">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif leading-tight text-gray-900">
             Modern Designs, <br />
             <span className="italic font-light text-neutral-400">
               Endless Possibilities
@@ -328,7 +328,7 @@ const Home = () => {
             Luxury Bathware
           </p>
 
-          <h1 className="text-5xl md:text-6xl font-serif leading-tight text-gray-900">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif leading-tight text-gray-900">
             Everyday Comfort, <br />
             <span className="italic font-light text-neutral-400">
               Designed Beautifully
