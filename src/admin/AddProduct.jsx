@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+ï»¿import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import usageIcons from "../data/usageIcons";
@@ -435,7 +435,7 @@ const AddProduct = () => {
         </div>
       </div>
 
-      {/* STEP 1 – CATEGORY */}
+      {/* STEP 1 ï¿½ CATEGORY */}
       {step === 1 && (
         <div className="space-y-4">
           <select
@@ -476,7 +476,7 @@ const AddProduct = () => {
         </div>
       )}
 
-      {/* STEP 2 – HERO */}
+      {/* STEP 2 ï¿½ HERO */}
       {step === 2 && (
         <div className="space-y-4">
           <input
@@ -531,7 +531,7 @@ const AddProduct = () => {
         </div>
       )}
 
-      {/* STEP 3 – OVERVIEW */}
+      {/* STEP 3 ï¿½ OVERVIEW */}
       {step === 3 && (
         <div className="space-y-4">
           <textarea
@@ -568,7 +568,7 @@ const AddProduct = () => {
         </div>
       )}
 
-      {/* STEP 4 – USAGE (ICONS) */}
+      {/* STEP 4 ï¿½ USAGE (ICONS) */}
       {step === 4 && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -610,7 +610,7 @@ const AddProduct = () => {
         </div>
       )}
 
-      {/* STEP 5 – APPLICATION IMAGES */}
+      {/* STEP 5 ï¿½ APPLICATION IMAGES */}
       {step === 5 && (
         <div className="space-y-4">
           <ImageUploader
@@ -638,7 +638,7 @@ const AddProduct = () => {
           </div>
         </div>
       )}
-      {/* STEP 6 – FINISH OPTIONS */}
+      {/* STEP 6 ï¿½ FINISH OPTIONS */}
       {step === 6 && (
         <div className="space-y-4">
           {finishes.map((f, i) => (
@@ -689,7 +689,7 @@ const AddProduct = () => {
         </div>
       )}
 
-      {/* STEP 7 – SPECIFICATIONS */}
+      {/* STEP 7 ï¿½ SPECIFICATIONS */}
       {step === 7 && (
         <div className="space-y-4">
           {specs.map((s, i) => (
